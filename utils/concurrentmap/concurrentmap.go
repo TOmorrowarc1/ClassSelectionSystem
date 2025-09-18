@@ -16,7 +16,7 @@ type ConcurrentMap[K comparable, V any] struct {
 	lock_ sync.RWMutex
 }
 
-func NewConcurrentMap[K comparable, V any](file_name *string) *ConcurrentMap[K, V] {
+func NewConcurrentMap[K comparable, V any]() *ConcurrentMap[K, V] {
 	return &ConcurrentMap[K, V]{
 		data_: make(map[K]V),
 		lock_: sync.RWMutex{},
