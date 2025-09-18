@@ -1,0 +1,58 @@
+# Name of the workflow, which will be displayed on the GitHub Actions tab
+name: Go CI and Test
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+  # Triggers the workflow on pull request events targeting the "main" branch
+  pull_request:
+    branches: [ "main" ]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This job is named "test"
+  test:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # A job can run one or more versions of Go
+    strategy:
+      matrix:
+        # We'll test against the two most recent major versions of Go
+        go-version: [ '1.24.4' ]
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Step 1: Check out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up the Go environment on the runner
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      # Step 3: Download dependencies
+      # Caching dependencies speeds up future runs
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install dependencies
+        run: go mod download
+
+      # Step 4: Run the tests!
+      # This is the core of the CI process.
+      - name: Run tests with race detector and coverage
+        # go test -v: verbose output
+        # go test -race: enable the race detector (CRITICAL for concurrent code)
+        # go test -coverprofile=coverage.out: generate a coverage report
+        # ./...: run tests in all subdirectories
+        run: go test -v -race -coverprofile=coverage.out ./...
