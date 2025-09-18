@@ -42,13 +42,13 @@ func GetLogger() *Logger {
 	return logger_instance
 }
 
-func (l *Logger) SetLogFile(filePath *string) error {
+func (l *Logger) SetLogFile(filePath string) error {
 	l.lock_.Lock()
 	defer l.lock_.Unlock()
 	if l.log_file != nil {
 		l.log_file.Close()
 	}
-	file, err := os.OpenFile(*filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
