@@ -45,7 +45,7 @@ func (it *ConcurrentMap[K, V]) DeletePair(key *K) {
 func (it *ConcurrentMap[K, V]) Load(file_name *string) error {
 	it.lock_.Lock()
 	defer it.lock_.Unlock()
-	file, err := os.Open(*file_name)
+	file, err := os.OpenFile(*file_name, os.O_RDONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (it *ConcurrentMap[K, V]) Load(file_name *string) error {
 func (it *ConcurrentMap[K, V]) Store(file_name *string) error {
 	it.lock_.RLock()
 	defer it.lock_.RUnlock()
-	file, err := os.Create(*file_name)
+	file, err := os.OpenFile(*file_name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
