@@ -23,29 +23,29 @@ func NewConcurrentMap[K comparable, V any]() *ConcurrentMap[K, V] {
 	}
 }
 
-func (it *ConcurrentMap[K, V]) ReadPair(key *K) (V, bool) {
+func (it *ConcurrentMap[K, V]) ReadPair(key K) (V, bool) {
 	it.lock_.RLock()
 	defer it.lock_.RUnlock()
-	value, ok := it.data_[*key]
+	value, ok := it.data_[key]
 	return value, ok
 }
 
-func (it *ConcurrentMap[K, V]) WritePair(key *K, value *V) {
+func (it *ConcurrentMap[K, V]) WritePair(key K, value *V) {
 	it.lock_.Lock()
 	defer it.lock_.Unlock()
-	it.data_[*key] = *value
+	it.data_[key] = *value
 }
 
-func (it *ConcurrentMap[K, V]) DeletePair(key *K) {
+func (it *ConcurrentMap[K, V]) DeletePair(key K) {
 	it.lock_.Lock()
 	defer it.lock_.Unlock()
-	delete(it.data_, *key)
+	delete(it.data_, key)
 }
 
-func (it *ConcurrentMap[K, V]) Load(file_name *string) error {
+func (it *ConcurrentMap[K, V]) Load(file_name string) error {
 	it.lock_.Lock()
 	defer it.lock_.Unlock()
-	file, err := os.OpenFile(*file_name, os.O_RDONLY|os.O_CREATE, 0644)
+	file, err := os.OpenFile(file_name, os.O_RDONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
@@ -58,10 +58,10 @@ func (it *ConcurrentMap[K, V]) Load(file_name *string) error {
 	return nil
 }
 
-func (it *ConcurrentMap[K, V]) Store(file_name *string) error {
+func (it *ConcurrentMap[K, V]) Store(file_name string) error {
 	it.lock_.RLock()
 	defer it.lock_.RUnlock()
-	file, err := os.OpenFile(*file_name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(file_name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}

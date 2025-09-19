@@ -12,8 +12,8 @@ The operations and the priviledge requiring at least are as follows:
    3. LogIn[Student]: use account and password to log into the system.
    4. LogOut[Student]: log out from the system.
    5. ModifyPassword[Student]: anyone in the system can modify its own password.
-   6. ReadAllUsers[Monitor]: list every user with name, password and identical information.
-   7. ReadPartUsers[Teacher]: list part of users with a keyword of either class or course they are in.  
+   6. GetAllUsersInfo[Monitor]: list every user with name, password and identical information.
+   7. GetPartUsersInfo[Teacher]: list part of users with a keyword of either class or course they are in.  
 2. Course Selection System:  
    1. AddCourse[Monitor]: add a new course with initial info, including name,professor and maximum students.
    2. ModifyCourse[Monitor]: modify information of a course.
@@ -57,13 +57,13 @@ We design the Web communication in a hidden-backend way, which means that the fr
       }
       5. ModifyPassword:   
       {
-       "password":
+         "password":
       }
-      6. ReadAllUsers:   
+      6. GetAllUsersInfo:   
       {
          null
       }
-      7. ReadPartUsers:   
+      7. GetPartUsersInfo:   
       {
          "way": 0 or 1, representing by class or course.
          "class":{"grade":,"class":}
@@ -121,7 +121,7 @@ We design the Web communication in a hidden-backend way, which means that the fr
       {
          "ErrorMessage": "string, empty when no error",
       }
-   6. ReadAllUsers:   
+   6. GetAllUsersInfo:   
       {
          "users": [
             {
@@ -135,7 +135,7 @@ We design the Web communication in a hidden-backend way, which means that the fr
             ...
          ],
       }
-   7. ReadPartUsers:   
+   7. GetPartUsersInfo:   
       {
          "users": [
             {
@@ -169,3 +169,6 @@ We design the Web communication in a hidden-backend way, which means that the fr
       {
          "ErrorMessage": "string, empty when no error",
       } 
+
+### More Specifc Design and Implementation
+Please view .md files in docs/. 

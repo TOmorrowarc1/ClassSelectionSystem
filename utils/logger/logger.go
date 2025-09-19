@@ -63,6 +63,8 @@ func (l *Logger) SetLogLevel(level LogLevel) {
 }
 
 func (l *Logger) Log(level LogLevel, format string, args ...interface{}) {
+	l.lock_.Lock()
+	defer l.lock_.Unlock()
 	if level < l.level_ {
 		return
 	}
