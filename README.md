@@ -12,14 +12,16 @@ The operations and the priviledge requiring at least are as follows:
    3. LogIn[Student]: use account and password to log into the system.
    4. LogOut[Student]: log out from the system.
    5. ModifyPassword[Student]: anyone in the system can modify its own password.
-   6. GetAllUsersInfo[Monitor]: list every user with name, password and identical information.
-   7. GetPartUsersInfo[Teacher]: list part of users with a keyword of either class or course they are in.  
+   6. GetUserInfo[Teacher]: get ones information, including name, password and identical information.
+   7. GetAllUsersInfo[Monitor]: list every user with name, password and identical information.
+   8. GetPartUsersInfo[Teacher]: list part of users with a keyword of either class or course they are in.  
 2. Course Selection System:  
    1. AddCourse[Monitor]: add a new course with initial info, including name,professor and maximum students.
    2. ModifyCourse[Monitor]: modify information of a course.
    3. LaunchCourse[Monitor]: make a elective course avaliable to students, both seats and information.
-   4. SelectCourse[Student]: choose a course whose places are enough when no picked one.
-   5. DropCourse[Student]: abandon a selected course.
+   4. GetAllCoursesInfo[Student]: list all avaliable courses with their information.
+   5. SelectCourse[Student]: choose a course whose places are enough when no picked one.
+   6. DropCourse[Student]: abandon a selected course.
 3. Logging System: Only the monitor can view the behavior of every one.
 
 ### Designing
@@ -59,17 +61,21 @@ We design the Web communication in a hidden-backend way, which means that the fr
       {
          "password":
       }
-      6. GetAllUsersInfo:   
+      6. GetUserInfo:
       {
          null
       }
-      7. GetPartUsersInfo:   
+      7. GetAllUsersInfo:   
+      {
+         null
+      }
+      8. GetPartUsersInfo:   
       {
          "way": 0 or 1, representing by class or course.
          "class":{"grade":,"class":}
          "courseName":
       }
-      8. AddCourse:   
+      9.  AddCourse:   
       {
          "courseInfo":{
             "name":
@@ -77,7 +83,7 @@ We design the Web communication in a hidden-backend way, which means that the fr
             "maximum":
          }
       }
-      9. ModifyCourse:   
+      10. ModifyCourse:   
       {
          "courseName":
          "courseInfo":{
@@ -86,15 +92,19 @@ We design the Web communication in a hidden-backend way, which means that the fr
             "maximum":
          }
       }
-      10. LaunchCourse:   
+      11. LaunchCourse:   
       {
          "courseName":
       }
-      11. SelectCourse:   
+      12. GetAllCoursesInfo:   
+      {
+         null
+      }
+      12. SelectCourse:   
       {
          "courseName":
       }
-      12. DropCourse:   
+      13. DropCourse:   
       {
          null
       }  
@@ -121,7 +131,17 @@ We design the Web communication in a hidden-backend way, which means that the fr
       {
          "ErrorMessage": "string, empty when no error",
       }
-   6. GetAllUsersInfo:   
+   6. GetUserInfo:   
+      {
+         "name": "string",
+         "password": "string",
+         "identityInfo": {
+            "class": {"grade": int, "class": int},
+            "previledge": int
+         },
+         "ErrorMessage": "string, empty when no error",
+      }
+   7. GetAllUsersInfo:   
       {
          "users": [
             {
@@ -135,7 +155,7 @@ We design the Web communication in a hidden-backend way, which means that the fr
             ...
          ],
       }
-   7. GetPartUsersInfo:   
+   8. GetPartUsersInfo:   
       {
          "users": [
             {
@@ -149,23 +169,36 @@ We design the Web communication in a hidden-backend way, which means that the fr
             ...
          ],
       }
-   8. AddCourse:   
+   9. AddCourse:   
       {
          "ErrorMessage": "string, empty when no error",
       }
-   9. ModifyCourse:   
+   10. ModifyCourse:   
       {
          "ErrorMessage": "string, empty when no error",
       }
-   10. LaunchCourse:   
+   11. LaunchCourse:   
       {
          "ErrorMessage": "string, empty when no error",
       }
-   11. SelectCourse:   
+   12. GetAllCoursesInfo:   
+      {
+         "courses": [
+            {
+               "name": "string",
+               "teacherName": "string",
+               "maximum": int,
+               "current": int,
+               "launched": bool
+            },
+            ...
+         ],
+      }
+   13. SelectCourse:   
       {
          "ErrorMessage": "string, empty when no error",
       }
-   12. DropCourse:   
+   14. DropCourse:   
       {
          "ErrorMessage": "string, empty when no error",
       } 

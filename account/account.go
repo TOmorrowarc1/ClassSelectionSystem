@@ -2,6 +2,7 @@ package account
 
 import (
 	"fmt"
+	"github.com/TOmorrowarc1/ClassSelectionSystem/course"
 	"github.com/TOmorrowarc1/ClassSelectionSystem/utils/concurrentmap"
 	"github.com/TOmorrowarc1/ClassSelectionSystem/utils/logger"
 )
@@ -65,19 +66,16 @@ func InitAccountSystem() {
 	logger_.Log(logger.INFO, "Account system initialized")
 }
 
-func StoreAccountData() error {
+func StoreAccountData() {
 	err := user_info_map.Store(USERINFOPATH)
 	if err != nil {
 		logger_.Log(logger.ERROR, "Failed to store user info: %v", err)
-		return err
 	}
 	err = class_user_map.Store(CLASSUSERPATH)
 	if err != nil {
 		logger_.Log(logger.ERROR, "Failed to store class user info: %v", err)
-		return err
 	}
 	logger_.Log(logger.INFO, "Account data stored successfully")
-	return nil
 }
 
 func Register(uid string, password string, grade int, class int, priviledge string) error {
@@ -162,8 +160,8 @@ func GetClassUsersInfo(grade int, class int) ([]*UserInfo, error) {
 		logger_.Log(logger.WARN, "GetClassUsers failed: Class %v does not exist", class_id)
 		return nil, fmt.Errorf("class %v does not exist", class_id)
 	}
-	result := make([]*UserInfo, 0, 32)
 	users_names := class_map.ReadAll()
+	result := make([]*UserInfo, 0, len(users_names))
 	for uid := range users_names {
 		user_info, ok := user_info_map.ReadPair(uid)
 		if ok {
@@ -176,9 +174,24 @@ func GetClassUsersInfo(grade int, class int) ([]*UserInfo, error) {
 	return result, nil
 }
 
+func GetCourseUsersInfo(uid string) ([]*UserInfo, error) {
+	course_id := course.GetCourseUsers(uid)
+	result := make([]*UserInfo, 0, len(course_id))
+	for _, cid := range course_id {
+		user_info, ok := user_info_map.ReadPair(cid)
+		if ok {
+			result = append(result, &user_info)
+		} else {
+			logger_.Log(logger.ERROR, "Inconsistent state: User %s in course %s does not exist", cid, course_id)
+			return nil, fmt.Errorf("inconsistent state: user %s in course %s does not exist", cid, course_id)
+		}
+	}
+	return result, nil
+}
+
 func GetAllUsersInfo() []*UserInfo {
-	result := make([]*UserInfo, 0, 128)
 	all_users := user_info_map.ReadAll()
+	result := make([]*UserInfo, 0, len(all_users))
 	for _, user_info := range all_users {
 		result = append(result, &user_info)
 	}
