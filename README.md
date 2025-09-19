@@ -32,7 +32,13 @@ While the frontend is not my deal.
 
 ### API Protocol
 We design the Web communication in a hidden-backend way, which means that the frontend only is able to know the single URL and a protocol regulating json in HTTP for communication, instead of using URL suffix for routing.  
-1. All kinds of request are consists of three main parts, sealing in a HTTP request and with a POST method:   
+1. All kinds of request are consists of three main parts, sealing in a json message in HTTP request of POST method:   
+   {
+      "token": "string, unique for each user for point 1",
+      "action": "string, one of the 14 actions below",
+      "parameters": as follows ...
+      "meta": blank, reserved for future use
+   }
    1. Identity information: all requests except LogIn should carry a unique authentation token as ID.
    2. Commands: the kind of request and corresponding parameters:
       1. Register:
@@ -75,7 +81,7 @@ We design the Web communication in a hidden-backend way, which means that the fr
          "class":{"grade":,"class":}
          "courseName":
       }
-      9.  AddCourse:   
+      9. AddCourse:   
       {
          "courseInfo":{
             "name":
@@ -100,11 +106,11 @@ We design the Web communication in a hidden-backend way, which means that the fr
       {
          null
       }
-      12. SelectCourse:   
+      13. SelectCourse:   
       {
          "courseName":
       }
-      13. DropCourse:   
+      14. DropCourse:   
       {
          null
       }  

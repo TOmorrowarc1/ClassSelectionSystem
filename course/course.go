@@ -60,7 +60,7 @@ func InitCourseSystem() {
 	}
 }
 
-func StoreCourseSystem() {
+func StoreCourseData() {
 	err := course_info_map.Store("data/course_info.json")
 	if err != nil {
 		course_logger.Log(logger.ERROR, "Failed to store course info: %v", err)
