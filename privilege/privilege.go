@@ -11,14 +11,14 @@ import (
 const LENGTH = 16
 
 var (
-	priviledge_map    *concurrentmap.ConcurrentMap[string, int]
-	priviledge_logger *logger.Logger
+	privilege_map    *concurrentmap.ConcurrentMap[string, int]
+	privilege_logger *logger.Logger
 )
 
-func InitPriviledgeSystem() {
-	priviledge_map = concurrentmap.NewConcurrentMap[string, int]()
-	priviledge_logger = logger.GetLogger()
-	// The priviledge_map is not persisted.
+func InitPrivilegeSystem() {
+	privilege_map = concurrentmap.NewConcurrentMap[string, int]()
+	privilege_logger = logger.GetLogger()
+	// The privilege_map is not persisted.
 }
 
 func generateToken() string {
@@ -26,33 +26,33 @@ func generateToken() string {
 	randomBytes := make([]byte, LENGTH)
 	_, err := rand.Read(randomBytes)
 	if err != nil {
-		priviledge_logger.Log(logger.ERROR, "Failed to generate random bytes: %v", err)
+		privilege_logger.Log(logger.ERROR, "Failed to generate random bytes: %v", err)
 		return ""
 	}
 	return hex.EncodeToString(randomBytes)
 }
 
-func UserLogIn(priviledge int) string {
+func UserLogIn(privilege int) string {
 	token := generateToken()
-	priviledge_map.WritePair(token, &priviledge)
-	priviledge_logger.Log(logger.INFO, "An user with priviledge %d get token %s", priviledge, token)
+	privilege_map.WritePair(token, &privilege)
+	privilege_logger.Log(logger.INFO, "An user with privilege %d get token %s", privilege, token)
 	return token
 }
 
 func UserAccess(token string) (int, error) {
-	if priviledge, ok := priviledge_map.ReadPair(token); ok {
-		return priviledge, nil
+	if privilege, ok := privilege_map.ReadPair(token); ok {
+		return privilege, nil
 	}
-	priviledge_logger.Log(logger.WARN, "Access denied: Invalid token %s", token)
+	privilege_logger.Log(logger.WARN, "Access denied: Invalid token %s", token)
 	return 0, fmt.Errorf("invalid token %s", token)
 }
 
 func UserLogOut(token string) error {
-	if _, ok := priviledge_map.ReadPair(token); !ok {
-		priviledge_map.DeletePair(token)
-		priviledge_logger.Log(logger.INFO, "Token %s logged out successfully", token)
+	if _, ok := privilege_map.ReadPair(token); !ok {
+		privilege_map.DeletePair(token)
+		privilege_logger.Log(logger.INFO, "Token %s logged out successfully", token)
 		return nil
 	}
-	priviledge_logger.Log(logger.WARN, "Logout failed: Invalid token %s", token)
+	privilege_logger.Log(logger.WARN, "Logout failed: Invalid token %s", token)
 	return fmt.Errorf("invalid token %s", token)
 }
