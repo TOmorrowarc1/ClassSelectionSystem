@@ -22,13 +22,13 @@ var (
 func main() {
 	system_logger = logger.GetLogger()
 	system_logger.SetLogFile("system.log")
-	system_logger.SetLogLevel(logger.DEBUG)
+	system_logger.SetLogLevel(logger.Debug)
 
-	system_logger.Log(logger.INFO, "System starting...")
+	system_logger.Log(logger.Info, "System starting...")
 	account.InitAccountSystem()
 	course.InitCourseSystem()
 	privilege.InitPrivilegeSystem()
-	system_logger.Log(logger.INFO, "All systems initialized.")
+	system_logger.Log(logger.Info, "All systems initialized.")
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api", RequestRoute)
@@ -38,26 +38,26 @@ func main() {
 	}
 
 	go func() {
-		system_logger.Log(logger.INFO, "Starting HTTP server on :8080")
+		system_logger.Log(logger.Info, "Starting HTTP server on :8080")
 		if err := server.ListenAndServe(); err != nil {
-			system_logger.Log(logger.FATAL, "Failed to start server: %v", err)
+			system_logger.Log(logger.Fatal, "Failed to start server: %v", err)
 		}
-		system_logger.Log(logger.INFO, "Server stopped.")
+		system_logger.Log(logger.Info, "Server stopped.")
 	}()
 
 	quit_channel := make(chan os.Signal, 1)
 	signal.Notify(quit_channel, syscall.SIGINT, syscall.SIGTERM)
 
 	<-quit_channel
-	system_logger.Log(logger.WARN, "Shutdown signal received. Starting graceful shutdown...")
+	system_logger.Log(logger.Warn, "Shutdown signal received. Starting graceful shutdown...")
 	account.StoreAccountData()
 	course.StoreCourseData()
-	system_logger.Log(logger.INFO, "All systems closed.")
+	system_logger.Log(logger.Info, "All systems closed.")
 
 	shutdown_ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	server.Shutdown(shutdown_ctx)
-	system_logger.Log(logger.INFO, "Server gracefully stopped.")
+	system_logger.Log(logger.Info, "Server gracefully stopped.")
 	system_logger.Close()
 }
 
@@ -87,9 +87,10 @@ func RequestRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var privilege_level int
+	var accountInfo privilege.AccountInfo
+	accountInfo.Privilege = -1
 	if req.Action != "LogIn" {
-		privilege_level, err = privilege.UserAccess(req.Token)
+		accountInfo, err = privilege.UserAccess(req.Token)
 		if err != nil {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
@@ -98,50 +99,74 @@ func RequestRoute(w http.ResponseWriter, r *http.Request) {
 
 	switch req.Action {
 	case "Register":
-		HandleRegister(w, req.Parameters, privilege_level)
+		HandleRegister(w, req.Parameters, accountInfo.Privilege)
 	case "Remove":
-		HandleRemove(w, req.Parameters, privilege_level)
+		HandleRemove(w, req.Parameters, accountInfo.Privilege)
 	case "LogIn":
 		HandleLogIn(w, req.Parameters)
 	case "LogOut":
 		HandleLogOut(w, req.Token)
 	case "ModifyPassword":
-		HandleModifyPassword(w, req.Parameters)
+		HandleModifyPassword(w, req.Parameters, accountInfo.UserName)
 	case "GetUserInfo":
-		HandleGetUserInfo(w, req.Parameters, privilege_level)
+		HandleGetUserInfo(w, req.Parameters, accountInfo.Privilege)
 	case "GetAllUsersInfo":
-		HandleGetAllUsersInfo(w, req.Parameters, privilege_level)
+		HandleGetAllUsersInfo(w, req.Parameters, accountInfo.Privilege)
 	case "GetPartUsersInfo":
-		HandleGetPartUsersInfo(w, req.Parameters, privilege_level)
+		HandleGetPartUsersInfo(w, req.Parameters, accountInfo.Privilege)
 	case "AddCourse":
-		HandleAddCourse(w, req.Parameters, privilege_level)
+		HandleAddCourse(w, req.Parameters, accountInfo.Privilege)
 	case "ModifyCourse":
-		HandleModifyCourse(w, req.Parameters, privilege_level)
+		HandleModifyCourse(w, req.Parameters, accountInfo.Privilege)
 	case "LaunchCourse":
-		HandleLaunchCourse(w, req.Parameters, privilege_level)
+		HandleLaunchCourse(w, req.Parameters, accountInfo.Privilege)
 	case "GetAllCoursesInfo":
 		HandleGetAllCoursesInfo(w, req.Parameters)
 	case "SelectCourse":
-		HandleSelectCourse(w, req.Parameters, privilege_level)
+		HandleSelectCourse(w, req.Parameters, accountInfo)
 	case "DropCourse":
-		HandleDropCourse(w, req.Parameters, privilege_level)
+		HandleDropCourse(w, req.Parameters, accountInfo)
 	default:
 		http.Error(w, "Unknown action", http.StatusBadRequest)
 	}
 }
 
+type UserInfoJson struct {
+	UserName      string `json:"username"`
+	Password      string `json:"password"`
+	Identity_info struct {
+		Class struct {
+			Grade int `json:"grade"`
+			Class int `json:"class"`
+		}
+		Privilege string `json:"privilege"`
+	}
+}
+
+func userInfoJsonConstruct(userInfo *account.UserInfo) UserInfoJson {
+	var user UserInfoJson
+	user.UserName = userInfo.Uid
+	user.Password = userInfo.Password
+	user.Identity_info.Class.Grade = userInfo.Classid.Grade
+	user.Identity_info.Class.Class = userInfo.Classid.Class
+	user.Identity_info.Privilege = account.PrivilegeToString(userInfo.Privilege)
+	return user
+}
+
+func userInfoJsonDeconstruct(userInfo *UserInfoJson) account.UserInfo {
+	var user account.UserInfo
+	user.Uid = userInfo.UserName
+	user.Password = userInfo.Password
+	user.Classid.Grade = userInfo.Identity_info.Class.Grade
+	user.Classid.Class = userInfo.Identity_info.Class.Class
+	user.Privilege = account.StringToPrivilege(userInfo.Identity_info.Privilege)
+	return user
+}
+
 // Typical logic for my work handler: (check privilege), decode parameters, execute the corresponding function and write back http reponse.
 func HandleRegister(w http.ResponseWriter, parameters json.RawMessage, privilege int) {
 	type Parameters struct {
-		User_name     string `json:"username"`
-		Password      string `json:"password"`
-		Identity_info struct {
-			Class struct {
-				Grade int `json:"grade"`
-				Class int `json:"class"`
-			}
-			Privilege string `json:"privilege"`
-		}
+		UserInfo UserInfoJson `json:"userInfo"`
 	}
 	type Response struct {
 		Message string `json:"errorMessage"`
@@ -149,7 +174,7 @@ func HandleRegister(w http.ResponseWriter, parameters json.RawMessage, privilege
 
 	w.Header().Set("Content-Type", "application/json")
 	var response Response
-	if privilege < account.PRIVILEGE_ADMIN {
+	if privilege < account.PrivilegeAdmin {
 		response.Message = "Permission denied"
 	} else {
 		var params Parameters
@@ -157,7 +182,7 @@ func HandleRegister(w http.ResponseWriter, parameters json.RawMessage, privilege
 		if err != nil {
 			response.Message = "Invalid parameters"
 		} else {
-			err = account.Register(params.User_name, params.Password, params.Identity_info.Class.Grade, params.Identity_info.Class.Class, params.Identity_info.Privilege)
+			err = account.Register(userInfoJsonDeconstruct(&params.UserInfo))
 			if err != nil {
 				response.Message = err.Error()
 			}
@@ -176,7 +201,7 @@ func HandleRemove(w http.ResponseWriter, parameters json.RawMessage, privilege i
 
 	w.Header().Set("Content-Type", "application/json")
 	var response Response
-	if privilege < account.PRIVILEGE_ADMIN {
+	if privilege < account.PrivilegeAdmin {
 		response.Message = "Permission denied"
 	} else {
 		var params Parameters
@@ -210,11 +235,12 @@ func HandleLogIn(w http.ResponseWriter, parameters json.RawMessage) {
 	if err != nil {
 		response.Message = "Invalid parameters"
 	} else {
-		privilege_level, err := account.LogIn(params.User_name, params.Password)
+		privilegeLevel, err := account.LogIn(params.User_name, params.Password)
 		if err != nil {
 			response.Message = err.Error()
 		} else {
-			response.Token = privilege.UserLogIn(privilege_level)
+			accountInfo := privilege.AccountInfo{UserName: params.User_name, Privilege: privilegeLevel}
+			response.Token = privilege.UserLogIn(accountInfo)
 		}
 	}
 	json.NewEncoder(w).Encode(response)
@@ -234,10 +260,9 @@ func HandleLogOut(w http.ResponseWriter, token string) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func HandleModifyPassword(w http.ResponseWriter, parameters json.RawMessage) {
+func HandleModifyPassword(w http.ResponseWriter, parameters json.RawMessage, uid string) {
 	type Parameters struct {
-		User_name string `json:"name"`
-		Password  string `json:"password"`
+		Password string `json:"password"`
 	}
 	type Response struct {
 		Message string `json:"errorMessage"`
@@ -250,7 +275,7 @@ func HandleModifyPassword(w http.ResponseWriter, parameters json.RawMessage) {
 	if err != nil {
 		response.Message = "Invalid parameters"
 	} else {
-		err = account.ModifyPassword(params.User_name, params.Password)
+		err = account.ModifyPassword(uid, params.Password)
 		if err != nil {
 			response.Message = err.Error()
 		}
@@ -258,40 +283,18 @@ func HandleModifyPassword(w http.ResponseWriter, parameters json.RawMessage) {
 	json.NewEncoder(w).Encode(response)
 }
 
-type UserInfo struct {
-	User_name     string `json:"name"`
-	Password      string `json:"password"`
-	Identity_info struct {
-		Class struct {
-			Grade int `json:"grade"`
-			Class int `json:"class"`
-		}
-		Privilege string `json:"privilege"`
-	}
-}
-
-func userInfoConstruct(user_info *account.UserInfo) UserInfo {
-	var user UserInfo
-	user.User_name = user_info.Uid_
-	user.Password = user_info.Password_
-	user.Identity_info.Class.Grade = user_info.Class_id_.Grade_
-	user.Identity_info.Class.Class = user_info.Class_id_.Class_
-	user.Identity_info.Privilege = account.PrivilegeToString(user_info.Privilege_)
-	return user
-}
-
 func HandleGetUserInfo(w http.ResponseWriter, parameters json.RawMessage, privilege int) {
 	type Parameters struct {
-		User_name string `json:"name"`
+		UserName string `json:"name"`
 	}
 	type Response struct {
-		User_info UserInfo
-		Message   string `json:"errorMessage"`
+		UserInfo UserInfoJson `json:"userInfo"`
+		Message  string       `json:"errorMessage"`
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	var response Response
-	if privilege < account.PRIVILEGE_TEACHER {
+	if privilege < account.PrivilegeTeacher {
 		response.Message = "Permission denied"
 	} else {
 		var params Parameters
@@ -299,12 +302,11 @@ func HandleGetUserInfo(w http.ResponseWriter, parameters json.RawMessage, privil
 		if err != nil {
 			response.Message = "Invalid parameters"
 		} else {
-			user_info, err := account.GetUserInfo(params.User_name)
+			userInfo, err := account.GetUserInfo(params.UserName)
 			if err != nil {
 				response.Message = err.Error()
 			} else {
-				user := userInfoConstruct(user_info)
-				response.User_info = user
+				response.UserInfo = userInfoJsonConstruct(userInfo)
 			}
 		}
 	}
@@ -313,19 +315,18 @@ func HandleGetUserInfo(w http.ResponseWriter, parameters json.RawMessage, privil
 
 func HandleGetAllUsersInfo(w http.ResponseWriter, parameters json.RawMessage, privilege int) {
 	type Response struct {
-		Users   []UserInfo `json:"users"`
-		Message string     `json:"errorMessage"`
+		Users   []UserInfoJson `json:"users"`
+		Message string         `json:"errorMessage"`
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	var response Response
-	if privilege < account.PRIVILEGE_ADMIN {
+	if privilege < account.PrivilegeAdmin {
 		response.Message = "Permission denied"
 	} else {
-		all_users := account.GetAllUsersInfo()
-		for _, user_info := range all_users {
-			user := userInfoConstruct(user_info)
-			response.Users = append(response.Users, user)
+		allUsers := account.GetAllUsersInfo()
+		for _, userInfo := range allUsers {
+			response.Users = append(response.Users, userInfoJsonConstruct(userInfo))
 		}
 	}
 	json.NewEncoder(w).Encode(response)
@@ -342,13 +343,13 @@ func HandleGetPartUsersInfo(w http.ResponseWriter, parameters json.RawMessage, p
 	}
 
 	type Response struct {
-		Users   []UserInfo `json:"users"`
-		Message string     `json:"errorMessage"`
+		Users   []UserInfoJson `json:"users"`
+		Message string         `json:"errorMessage"`
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	var response Response
-	if privilege < account.PRIVILEGE_TEACHER {
+	if privilege < account.PrivilegeTeacher {
 		response.Message = "Permission denied"
 	} else {
 		var params Parameters
@@ -357,12 +358,13 @@ func HandleGetPartUsersInfo(w http.ResponseWriter, parameters json.RawMessage, p
 			response.Message = "Invalid parameters"
 		} else {
 			if params.Way == 0 {
-				users, err := account.GetClassUsersInfo(params.Class.Grade, params.Class.Class)
+				classid := account.ClassID{Grade: params.Class.Grade, Class: params.Class.Class}
+				users, err := account.GetClassUsersInfo(classid)
 				if err != nil {
 					response.Message = err.Error()
 				} else {
-					for _, user_info := range users {
-						user := userInfoConstruct(user_info)
+					for _, userInfo := range users {
+						user := userInfoJsonConstruct(userInfo)
 						response.Users = append(response.Users, user)
 					}
 				}
@@ -371,8 +373,8 @@ func HandleGetPartUsersInfo(w http.ResponseWriter, parameters json.RawMessage, p
 				if err != nil {
 					response.Message = err.Error()
 				} else {
-					for _, user_info := range users {
-						user := userInfoConstruct(user_info)
+					for _, userInfo := range users {
+						user := userInfoJsonConstruct(userInfo)
 						response.Users = append(response.Users, user)
 					}
 				}
@@ -385,9 +387,9 @@ func HandleGetPartUsersInfo(w http.ResponseWriter, parameters json.RawMessage, p
 }
 
 type CourseInfo struct {
-	Course_name  string `json:"name"`
-	Teacher_name string `json:"teacherName"`
-	Max_student  int    `json:"maximum"`
+	CourseName  string `json:"name"`
+	TeacherName string `json:"teacherName"`
+	Max_student int    `json:"maximum"`
 }
 
 func HandleAddCourse(w http.ResponseWriter, parameters json.RawMessage, privilege int) {
@@ -400,7 +402,7 @@ func HandleAddCourse(w http.ResponseWriter, parameters json.RawMessage, privileg
 
 	w.Header().Set("Content-Type", "application/json")
 	var response Response
-	if privilege < account.PRIVILEGE_ADMIN {
+	if privilege < account.PrivilegeAdmin {
 		response.Message = "Permission denied"
 	} else {
 		var params Parameters
@@ -408,7 +410,7 @@ func HandleAddCourse(w http.ResponseWriter, parameters json.RawMessage, privileg
 		if err != nil {
 			response.Message = "Invalid parameters"
 		} else {
-			err = course.AddCourse(params.Course_Info.Course_name, params.Course_Info.Teacher_name, params.Course_Info.Max_student)
+			err = course.AddCourse(params.Course_Info.CourseName, params.Course_Info.TeacherName, params.Course_Info.Max_student)
 			if err != nil {
 				response.Message = err.Error()
 			}
@@ -419,8 +421,8 @@ func HandleAddCourse(w http.ResponseWriter, parameters json.RawMessage, privileg
 
 func HandleModifyCourse(w http.ResponseWriter, parameters json.RawMessage, privilege int) {
 	type Parameters struct {
-		Course_Name string     `json:"courseName"`
-		Course_Info CourseInfo `json:"courseInfo"`
+		CourseName string     `json:"courseName"`
+		CourseInfo CourseInfo `json:"courseInfo"`
 	}
 	type Response struct {
 		Message string `json:"errorMessage"`
@@ -428,7 +430,7 @@ func HandleModifyCourse(w http.ResponseWriter, parameters json.RawMessage, privi
 
 	w.Header().Set("Content-Type", "application/json")
 	var response Response
-	if privilege < account.PRIVILEGE_ADMIN {
+	if privilege < account.PrivilegeAdmin {
 		response.Message = "Permission denied"
 	} else {
 		var params Parameters
@@ -436,7 +438,7 @@ func HandleModifyCourse(w http.ResponseWriter, parameters json.RawMessage, privi
 		if err != nil {
 			response.Message = "Invalid parameters"
 		} else {
-			err = course.ModifyCourse(params.Course_Name, params.Course_Info.Course_name, params.Course_Info.Teacher_name, params.Course_Info.Max_student)
+			err = course.ModifyCourse(params.CourseName, params.CourseInfo.TeacherName, params.CourseInfo.Max_student)
 			if err != nil {
 				response.Message = err.Error()
 			}
@@ -447,7 +449,7 @@ func HandleModifyCourse(w http.ResponseWriter, parameters json.RawMessage, privi
 
 func HandleLaunchCourse(w http.ResponseWriter, parameters json.RawMessage, privilege int) {
 	type Parameters struct {
-		Course_Name string `json:"courseName"`
+		CourseName string `json:"courseName"`
 	}
 	type Response struct {
 		Message string `json:"errorMessage"`
@@ -455,7 +457,7 @@ func HandleLaunchCourse(w http.ResponseWriter, parameters json.RawMessage, privi
 
 	w.Header().Set("Content-Type", "application/json")
 	var response Response
-	if privilege < account.PRIVILEGE_ADMIN {
+	if privilege < account.PrivilegeAdmin {
 		response.Message = "Permission denied"
 	} else {
 		var params Parameters
@@ -463,7 +465,7 @@ func HandleLaunchCourse(w http.ResponseWriter, parameters json.RawMessage, privi
 		if err != nil {
 			response.Message = "Invalid parameters"
 		} else {
-			err = course.LaunchCourse(params.Course_Name)
+			err = course.LaunchCourse(params.CourseName)
 			if err != nil {
 				response.Message = err.Error()
 			}
@@ -473,22 +475,23 @@ func HandleLaunchCourse(w http.ResponseWriter, parameters json.RawMessage, privi
 }
 
 type CourseFullInfo struct {
-	Course_name  string `json:"name"`
-	Teacher_name string `json:"teacherName"`
-	Max_students int    `json:"maximum"`
-	Now_students int    `json:"current"`
-	Lanuched     bool   `json:"launched"`
+	CourseName  string `json:"name"`
+	TeacherName string `json:"teacherName"`
+	MaxStudents int    `json:"maximum"`
+	NowStudents int    `json:"current"`
+	Lanuched    bool   `json:"launched"`
 }
 
 func courseFullInfoConstruct(course_info *course.CourseInfo) CourseFullInfo {
 	var course CourseFullInfo
-	course.Course_name = course_info.Course_name
-	course.Teacher_name = course_info.Teacher
-	course.Max_students = course_info.Max_students
-	course.Now_students = course_info.Now_students
+	course.CourseName = course_info.CourseName
+	course.TeacherName = course_info.Teacher
+	course.MaxStudents = course_info.MaxStudents
+	course.NowStudents = course_info.NowStudents
 	course.Lanuched = course_info.Lanuched
 	return course
 }
+
 func HandleGetAllCoursesInfo(w http.ResponseWriter, parameters json.RawMessage) {
 	type Response struct {
 		Courses []CourseFullInfo `json:"courses"`
@@ -505,10 +508,9 @@ func HandleGetAllCoursesInfo(w http.ResponseWriter, parameters json.RawMessage) 
 	json.NewEncoder(w).Encode(response)
 }
 
-func HandleSelectCourse(w http.ResponseWriter, parameters json.RawMessage, privilege int) {
+func HandleSelectCourse(w http.ResponseWriter, parameters json.RawMessage, accountInfo privilege.AccountInfo) {
 	type Parameters struct {
-		Course_Name string `json:"courseName"`
-		UserName    string `json:"name"`
+		CourseName string `json:"courseName"`
 	}
 	type Response struct {
 		Message string `json:"errorMessage"`
@@ -516,7 +518,7 @@ func HandleSelectCourse(w http.ResponseWriter, parameters json.RawMessage, privi
 
 	w.Header().Set("Content-Type", "application/json")
 	var response Response
-	if privilege != account.PRIVILEGE_STUDENT {
+	if accountInfo.Privilege != account.PrivilegeStudent {
 		response.Message = "Only students can select courses"
 	} else {
 		var params Parameters
@@ -524,7 +526,7 @@ func HandleSelectCourse(w http.ResponseWriter, parameters json.RawMessage, privi
 		if err != nil {
 			response.Message = "Invalid parameters"
 		} else {
-			err = course.SelectCourse(params.UserName, params.Course_Name)
+			err = course.SelectCourse(accountInfo.UserName, params.CourseName)
 			if err != nil {
 				response.Message = err.Error()
 			}
@@ -533,27 +535,18 @@ func HandleSelectCourse(w http.ResponseWriter, parameters json.RawMessage, privi
 	json.NewEncoder(w).Encode(response)
 }
 
-func HandleDropCourse(w http.ResponseWriter, parameters json.RawMessage, privilege int) {
-	type Parameters struct {
-		UserName string `json:"name"`
-	}
+func HandleDropCourse(w http.ResponseWriter, parameters json.RawMessage, accountInfo privilege.AccountInfo) {
 	type Response struct {
 		Message string `json:"errorMessage"`
 	}
 	w.Header().Set("Content-Type", "application/json")
 	var response Response
-	if privilege != account.PRIVILEGE_STUDENT {
+	if accountInfo.Privilege != account.PrivilegeStudent {
 		response.Message = "Only students can drop courses"
 	} else {
-		var params Parameters
-		err := json.Unmarshal(parameters, &params)
+		err := course.DropCourse(accountInfo.UserName)
 		if err != nil {
-			response.Message = "Invalid parameters"
-		} else {
-			err = course.DropCourse(params.UserName)
-			if err != nil {
-				response.Message = err.Error()
-			}
+			response.Message = err.Error()
 		}
 	}
 	json.NewEncoder(w).Encode(response)

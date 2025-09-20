@@ -43,11 +43,13 @@ We design the Web communication in a hidden-backend way, which means that the fr
    2. Commands: the kind of request and corresponding parameters:
       1. Register:
       {
-         "name":
-         "password":
-         "identityInfo":{
-            "class":{"grade":,"class":}
-            "previledge":
+         "userInfo":{
+            "name":
+            "password":
+            "identityInfo":{
+               "class":{"grade":,"class":}
+               "previledge":
+            }
          }
       }
       2. Remove:
@@ -65,7 +67,6 @@ We design the Web communication in a hidden-backend way, which means that the fr
       }
       5. ModifyPassword:   
       {
-         "name":
          "password":
       }
       6. GetUserInfo:
@@ -109,12 +110,11 @@ We design the Web communication in a hidden-backend way, which means that the fr
       }
       13. SelectCourse:   
       {
-         "name":
          "courseName":
       }
       14. DropCourse:   
       {
-         "name":
+         null
       }  
    3. Meta data: version of the API, version of the application, and so on.
 2. Responses are also json objects in HTTP posts, which contains the following parts and a status code of 200(when backend works well):
@@ -141,24 +141,26 @@ We design the Web communication in a hidden-backend way, which means that the fr
       }
    6. GetUserInfo:   
       {
-         "name": "string",
-         "password": "string",
-         "identityInfo": {
-            "class": {"grade": int, "class": int},
-            "previledge": int
+         "userInfo": {
+            "name": "string",
+            "password": "string",
+            "identityInfo": {
+               "class": {"grade": int, "class": int},
+               "previledge": int
+            }
          },
          "errorMessage": "string, empty when no error",
       }
    7. GetAllUsersInfo:   
       {
          "users": [
-            {
+            "userInfo":{
                "name": "string",
                "password": "string",
                "identityInfo": {
                   "class": {"grade": int, "class": int},
                   "previledge": int
-               }
+               },
             },
             ...
          ],
