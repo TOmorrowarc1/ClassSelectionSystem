@@ -7,191 +7,191 @@ import (
 )
 
 type CourseInfo struct {
-	Course_name  string
-	Teacher      string
-	Max_students int
-	Now_students int
-	Lanuched     bool
+	CourseName  string
+	Teacher     string
+	MaxStudents int
+	NowStudents int
+	Lanuched    bool
 }
 
 var (
-	course_info_map *concurrentmap.ConcurrentMap[string, CourseInfo]
-	launched_map    *concurrentmap.ConcurrentMap[string, struct{}]
-	course_user_map *concurrentmap.ConcurrentMap[string, *concurrentmap.ConcurrentMap[string, struct{}]]
-	user_course_map *concurrentmap.ConcurrentMap[string, string]
-	course_logger   *logger.Logger
+	courseInfoMap *concurrentmap.ConcurrentMap[string, CourseInfo]
+	lanuchedMap   *concurrentmap.ConcurrentMap[string, struct{}]
+	courseUserMap *concurrentmap.ConcurrentMap[string, *concurrentmap.ConcurrentMap[string, struct{}]]
+	userCourseMap *concurrentmap.ConcurrentMap[string, string]
+	courseLogger  *logger.Logger
 )
 
 func InitCourseSystem() {
-	course_info_map = concurrentmap.NewConcurrentMap[string, CourseInfo]()
-	launched_map = concurrentmap.NewConcurrentMap[string, struct{}]()
-	course_user_map = concurrentmap.NewConcurrentMap[string, *concurrentmap.ConcurrentMap[string, struct{}]]()
-	user_course_map = concurrentmap.NewConcurrentMap[string, string]()
-	course_logger = logger.GetLogger()
-	course_info_map.Load("data/course_info.json")
-	launched_map.Load("data/launched_courses.json")
-	course_user_map.Load("data/course_user.json")
-	user_course_map.Load("data/user_course.json")
+	courseInfoMap = concurrentmap.NewConcurrentMap[string, CourseInfo]()
+	lanuchedMap = concurrentmap.NewConcurrentMap[string, struct{}]()
+	courseUserMap = concurrentmap.NewConcurrentMap[string, *concurrentmap.ConcurrentMap[string, struct{}]]()
+	userCourseMap = concurrentmap.NewConcurrentMap[string, string]()
+	courseLogger = logger.GetLogger()
+	courseInfoMap.Load("data/course_Info.json")
+	lanuchedMap.Load("data/launched_courses.json")
+	courseUserMap.Load("data/course_user.json")
+	userCourseMap.Load("data/user_course.json")
 	// Check for consistency
-	// 1. All launched courses must exist in course_info_map
-	all_launched_course := launched_map.ReadAll()
-	for course_id := range all_launched_course {
-		if _, ok := course_info_map.ReadPair(course_id); !ok {
-			course_logger.Log(logger.ERROR, "Inconsistent state: Launched course %s does not exist in course_info_map, removing", course_id)
-			launched_map.DeletePair(course_id)
+	// 1. All launched courses must exist in courseInfoMap
+	all_launched_course := lanuchedMap.ReadAll()
+	for courseName := range all_launched_course {
+		if _, ok := courseInfoMap.ReadPair(courseName); !ok {
+			courseLogger.Log(logger.Error, "Inconsistent state: Launched course %s does not exist in courseInfoMap, removing", courseName)
+			lanuchedMap.DeletePair(courseName)
 		}
 	}
-	// 2. All courses in course_user_map must exist in launched_map.
-	all_selected_course := course_user_map.ReadAll()
-	for course_id := range all_selected_course {
-		if _, ok := launched_map.ReadPair(course_id); !ok {
-			course_logger.Log(logger.ERROR, "Inconsistent state: Course %s in course_user_map does not exist in launched_map, removing", course_id)
-			course_user_map.DeletePair(course_id)
+	// 2. All courses in courseUserMap must exist in lanuchedMap.
+	all_selected_course := courseUserMap.ReadAll()
+	for courseName := range all_selected_course {
+		if _, ok := lanuchedMap.ReadPair(courseName); !ok {
+			courseLogger.Log(logger.Error, "Inconsistent state: Course %s in courseUserMap does not exist in lanuchedMap, removing", courseName)
+			courseUserMap.DeletePair(courseName)
 		}
 	}
-	// 3. The information in course_user_map and user_course_map must be reflective, and I use the course_user_map as the standard.
-	for course_id, user_map := range all_selected_course {
+	// 3. The Information in courseUserMap and userCourseMap must be reflective, and I use the courseUserMap as the standard.
+	for courseName, user_map := range all_selected_course {
 		for uid := range user_map.ReadAll() {
-			if cid, ok := user_course_map.ReadPair(uid); !ok || cid != course_id {
-				course_logger.Log(logger.ERROR, "Inconsistent state: User %s in course_user_map[%s] but not in user_course_map or inconsistent, removing", uid, course_id)
-				user_course_map.DeletePair(uid)
-				user_course_map.WritePair(uid, &course_id)
+			if cid, ok := userCourseMap.ReadPair(uid); !ok || cid != courseName {
+				courseLogger.Log(logger.Error, "Inconsistent state: User %s in courseUserMap[%s] but not in userCourseMap or inconsistent, removing", uid, courseName)
+				userCourseMap.DeletePair(uid)
+				userCourseMap.WritePair(uid, &courseName)
 			}
 		}
 	}
 }
 
 func StoreCourseData() {
-	err := course_info_map.Store("data/course_info.json")
+	err := courseInfoMap.Store("data/course_Info.json")
 	if err != nil {
-		course_logger.Log(logger.ERROR, "Failed to store course info: %v", err)
+		courseLogger.Log(logger.Error, "Failed to store course Info: %v", err)
 	}
-	err = launched_map.Store("data/launched_courses.json")
+	err = lanuchedMap.Store("data/launched_courses.json")
 	if err != nil {
-		course_logger.Log(logger.ERROR, "Failed to store launched courses: %v", err)
+		courseLogger.Log(logger.Error, "Failed to store launched courses: %v", err)
 	}
-	err = course_user_map.Store("data/course_user.json")
+	err = courseUserMap.Store("data/course_user.json")
 	if err != nil {
-		course_logger.Log(logger.ERROR, "Failed to store course user map: %v", err)
+		courseLogger.Log(logger.Error, "Failed to store course user map: %v", err)
 	}
-	err = user_course_map.Store("data/user_course.json")
+	err = userCourseMap.Store("data/user_course.json")
 	if err != nil {
-		course_logger.Log(logger.ERROR, "Failed to store user course map: %v", err)
+		courseLogger.Log(logger.Error, "Failed to store user course map: %v", err)
 	}
-	course_logger.Log(logger.INFO, "Course data stored successfully")
+	courseLogger.Log(logger.Info, "Course data stored successfully")
 }
 
-func AddCourse(course_name string, teacher string, max_students int) error {
-	if _, ok := course_info_map.ReadPair(course_name); ok {
-		course_logger.Log(logger.WARN, "Addition failed: Course %s already exists", course_name)
-		return fmt.Errorf("course %s already exists", course_name)
+func AddCourse(CourseName string, teacher string, MaxStudents int) error {
+	if _, ok := courseInfoMap.ReadPair(CourseName); ok {
+		courseLogger.Log(logger.Warn, "Addition failed: Course %s already exists", CourseName)
+		return fmt.Errorf("course %s already exists", CourseName)
 	}
 	new_course := CourseInfo{
-		Course_name:  course_name,
-		Teacher:      teacher,
-		Max_students: max_students,
-		Now_students: 0,
-		Lanuched:     false,
+		CourseName:  CourseName,
+		Teacher:     teacher,
+		MaxStudents: MaxStudents,
+		NowStudents: 0,
+		Lanuched:    false,
 	}
-	course_info_map.WritePair(course_name, &new_course)
+	courseInfoMap.WritePair(CourseName, &new_course)
 	return nil
 }
 
-func ModifyCourse(course_id string, course_name string, teacher string, max_students int) error {
-	if _, exist := launched_map.ReadPair(course_id); exist {
-		course_logger.Log(logger.WARN, "Modification failed: Course %s is already launched", course_id)
-		return fmt.Errorf("course %s is already launched", course_id)
+func ModifyCourse(courseName string, teacher string, MaxStudents int) error {
+	if _, exist := lanuchedMap.ReadPair(courseName); exist {
+		courseLogger.Log(logger.Warn, "Modification failed: Course %s is already launched", courseName)
+		return fmt.Errorf("course %s is already launched", courseName)
 	}
-	course_info, ok := course_info_map.ReadPair(course_id)
+	course_Info, ok := courseInfoMap.ReadPair(courseName)
 	if !ok {
-		course_logger.Log(logger.WARN, "Modification failed: Course %s does not exist", course_id)
-		return fmt.Errorf("course %s does not exist", course_id)
+		courseLogger.Log(logger.Warn, "Modification failed: Course %s does not exist", courseName)
+		return fmt.Errorf("course %s does not exist", courseName)
 	}
-	course_info.Course_name = course_name
-	course_info.Teacher = teacher
-	course_info.Max_students = max_students
-	course_info_map.WritePair(course_id, &course_info)
+	course_Info.CourseName = courseName
+	course_Info.Teacher = teacher
+	course_Info.MaxStudents = MaxStudents
+	courseInfoMap.WritePair(courseName, &course_Info)
 	return nil
 }
 
-func LaunchCourse(course_id string) error {
-	_, ok := course_info_map.ReadPair(course_id)
+func LaunchCourse(courseName string) error {
+	_, ok := courseInfoMap.ReadPair(courseName)
 	if !ok {
-		course_logger.Log(logger.WARN, "Launch failed: Course %s does not exist", course_id)
-		return fmt.Errorf("course %s does not exist", course_id)
+		courseLogger.Log(logger.Warn, "Launch failed: Course %s does not exist", courseName)
+		return fmt.Errorf("course %s does not exist", courseName)
 	}
-	if _, exist := launched_map.ReadPair(course_id); exist {
-		course_logger.Log(logger.WARN, "Launch failed: Course %s is already launched", course_id)
-		return fmt.Errorf("course %s is already launched", course_id)
+	if _, exist := lanuchedMap.ReadPair(courseName); exist {
+		courseLogger.Log(logger.Warn, "Launch failed: Course %s is already launched", courseName)
+		return fmt.Errorf("course %s is already launched", courseName)
 	}
-	launched_map.WritePair(course_id, &struct{}{})
+	lanuchedMap.WritePair(courseName, &struct{}{})
 	temp_map := concurrentmap.NewConcurrentMap[string, struct{}]()
-	course_user_map.WritePair(course_id, &temp_map)
-	course_logger.Log(logger.INFO, "Course %s launched successfully", course_id)
+	courseUserMap.WritePair(courseName, &temp_map)
+	courseLogger.Log(logger.Info, "Course %s launched successfully", courseName)
 	return nil
 }
 
-func SelectCourse(uid string, course_id string) error {
-	if _, ok := user_course_map.ReadPair(uid); ok {
-		course_logger.Log(logger.WARN, "Selection failed: User %s has already selected a course", uid)
+func SelectCourse(uid string, courseName string) error {
+	if _, ok := userCourseMap.ReadPair(uid); ok {
+		courseLogger.Log(logger.Warn, "Selection failed: User %s has already selected a course", uid)
 		return fmt.Errorf("user %s has already selected a course", uid)
 	}
-	if _, exist := launched_map.ReadPair(course_id); !exist {
-		course_logger.Log(logger.WARN, "Selection failed: Course %s is not launched", course_id)
-		return fmt.Errorf("course %s is not launched", course_id)
+	if _, exist := lanuchedMap.ReadPair(courseName); !exist {
+		courseLogger.Log(logger.Warn, "Selection failed: Course %s is not launched", courseName)
+		return fmt.Errorf("course %s is not launched", courseName)
 	}
-	course_info, _ := course_info_map.ReadPair(course_id)
-	if course_info.Now_students >= course_info.Max_students {
-		course_logger.Log(logger.WARN, "Selection failed: Course %s is full", course_id)
-		return fmt.Errorf("course %s is full", course_id)
+	courseInfo, _ := courseInfoMap.ReadPair(courseName)
+	if courseInfo.NowStudents >= courseInfo.MaxStudents {
+		courseLogger.Log(logger.Warn, "Selection failed: Course %s is full", courseName)
+		return fmt.Errorf("course %s is full", courseName)
 	}
-	user_map, _ := course_user_map.ReadPair(course_id)
+	user_map, _ := courseUserMap.ReadPair(courseName)
 	user_map.WritePair(uid, &struct{}{})
-	user_course_map.WritePair(uid, &course_id)
-	course_info.Now_students++
-	course_info_map.WritePair(course_id, &course_info)
-	course_logger.Log(logger.INFO, "User %s selected course %s successfully", uid, course_id)
+	userCourseMap.WritePair(uid, &courseName)
+	courseInfo.NowStudents++
+	courseInfoMap.WritePair(courseName, &courseInfo)
+	courseLogger.Log(logger.Info, "User %s selected course %s successfully", uid, courseName)
 	return nil
 }
 
 func DropCourse(uid string) error {
-	course_id, ok := user_course_map.ReadPair(uid)
+	courseName, ok := userCourseMap.ReadPair(uid)
 	if !ok {
-		course_logger.Log(logger.WARN, "Drop failed: User %s has not selected any course", uid)
+		courseLogger.Log(logger.Warn, "Drop failed: User %s has not selected any course", uid)
 		return fmt.Errorf("user %s has not selected any course", uid)
 	}
-	user_map, ok := course_user_map.ReadPair(course_id)
+	userMap, ok := courseUserMap.ReadPair(courseName)
 	if !ok {
-		course_logger.Log(logger.ERROR, "Inconsistent state: Course %s for user %s does not exist in course_user_map", course_id, uid)
-		return fmt.Errorf("inconsistent state: course %s for user %s does not exist in course_user_map", course_id, uid)
+		courseLogger.Log(logger.Error, "Inconsistent state: Course %s for user %s does not exist in courseUserMap", courseName, uid)
+		return fmt.Errorf("inconsistent state: course %s for user %s does not exist in courseUserMap", courseName, uid)
 	}
-	user_map.DeletePair(uid)
-	user_course_map.DeletePair(uid)
-	course_info, _ := course_info_map.ReadPair(course_id)
-	course_info.Now_students--
-	course_info_map.WritePair(course_id, &course_info)
-	course_logger.Log(logger.INFO, "User %s dropped course %s successfully", uid, course_id)
+	userMap.DeletePair(uid)
+	userCourseMap.DeletePair(uid)
+	courseInfo, _ := courseInfoMap.ReadPair(courseName)
+	courseInfo.NowStudents--
+	courseInfoMap.WritePair(courseName, &courseInfo)
+	courseLogger.Log(logger.Info, "User %s dropped course %s successfully", uid, courseName)
 	return nil
 }
 
 func GetAllCoursesInfo() []*CourseInfo {
-	result_map := course_info_map.ReadAll()
-	result := make([]*CourseInfo, 0, len(result_map))
-	for _, course_info := range result_map {
-		result = append(result, &course_info)
+	resultMap := courseInfoMap.ReadAll()
+	result := make([]*CourseInfo, 0, len(resultMap))
+	for _, courseInfo := range resultMap {
+		result = append(result, &courseInfo)
 	}
 	return result
 }
 
-func GetCourseUsers(course_id string) []string {
-	user_map, ok := course_user_map.ReadPair(course_id)
+func GetCourseUsers(courseName string) []string {
+	user_map, ok := courseUserMap.ReadPair(courseName)
 	if !ok {
-		course_logger.Log(logger.WARN, "GetCourseUsers failed: Course %s is not launched or does not exist", course_id)
+		courseLogger.Log(logger.Warn, "GetCourseUsers failed: Course %s is not launched or does not exist", courseName)
 		return nil
 	}
-	user_names := user_map.ReadAll()
-	result := make([]string, 0, len(user_names))
-	for uid := range user_names {
+	userNames := user_map.ReadAll()
+	result := make([]string, 0, len(userNames))
+	for uid := range userNames {
 		result = append(result, uid)
 	}
 	return result
