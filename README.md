@@ -65,11 +65,12 @@ We design the Web communication in a hidden-backend way, which means that the fr
       }
       5. ModifyPassword:   
       {
+         "name":
          "password":
       }
       6. GetUserInfo:
       {
-         null
+         "name":
       }
       7. GetAllUsersInfo:   
       {
@@ -108,34 +109,35 @@ We design the Web communication in a hidden-backend way, which means that the fr
       }
       13. SelectCourse:   
       {
+         "name":
          "courseName":
       }
       14. DropCourse:   
       {
-         null
+         "name":
       }  
    3. Meta data: version of the API, version of the application, and so on.
 2. Responses are also json objects in HTTP posts, which contains the following parts and a status code of 200(when backend works well):
    1. Register:
       {
-         "ErrorMessage": "string, empty when no error",
+         "errorMessage": "string, empty when no error",
       }
    2. Remove:
       {
-         "ErrorMessage": "string, empty when no error",
+         "errorMessage": "string, empty when no error",
       }
    3. LogIn:   
       {
          "authToken": "string, unique for each user",
-         "ErrorMessage": "string, empty when no error",
+         "errorMessage": "string, empty when no error",
       }
    4. LogOut:   
       {
-         "ErrorMessage": "string, empty when no error",
+         "errorMessage": "string, empty when no error",
       }
    5. ModifyPassword:   
       {
-         "ErrorMessage": "string, empty when no error",
+         "errorMessage": "string, empty when no error",
       }
    6. GetUserInfo:   
       {
@@ -145,7 +147,7 @@ We design the Web communication in a hidden-backend way, which means that the fr
             "class": {"grade": int, "class": int},
             "previledge": int
          },
-         "ErrorMessage": "string, empty when no error",
+         "errorMessage": "string, empty when no error",
       }
    7. GetAllUsersInfo:   
       {
@@ -177,15 +179,15 @@ We design the Web communication in a hidden-backend way, which means that the fr
       }
    9. AddCourse:   
       {
-         "ErrorMessage": "string, empty when no error",
+         "errorMessage": "string, empty when no error",
       }
    10. ModifyCourse:   
       {
-         "ErrorMessage": "string, empty when no error",
+         "errorMessage": "string, empty when no error",
       }
    11. LaunchCourse:   
       {
-         "ErrorMessage": "string, empty when no error",
+         "errorMessage": "string, empty when no error",
       }
    12. GetAllCoursesInfo:   
       {
@@ -199,14 +201,15 @@ We design the Web communication in a hidden-backend way, which means that the fr
             },
             ...
          ],
+         "errorMessage": "string, empty when no error",
       }
    13. SelectCourse:   
       {
-         "ErrorMessage": "string, empty when no error",
+         "errorMessage": "string, empty when no error",
       }
    14. DropCourse:   
       {
-         "ErrorMessage": "string, empty when no error",
+         "errorMessage": "string, empty when no error",
       } 
 
 ### More Specifc Design and Implementation

@@ -1,4 +1,4 @@
-package priviledge
+package privilege
 
 import (
 	"crypto/rand"
@@ -32,10 +32,11 @@ func generateToken() string {
 	return hex.EncodeToString(randomBytes)
 }
 
-func UserLogIn(priviledge int) {
+func UserLogIn(priviledge int) string {
 	token := generateToken()
 	priviledge_map.WritePair(token, &priviledge)
 	priviledge_logger.Log(logger.INFO, "An user with priviledge %d get token %s", priviledge, token)
+	return token
 }
 
 func UserAccess(token string) (int, error) {

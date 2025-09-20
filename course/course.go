@@ -7,10 +7,11 @@ import (
 )
 
 type CourseInfo struct {
-	course_name  string
-	teacher      string
-	max_students int
-	now_students int
+	Course_name  string
+	Teacher      string
+	Max_students int
+	Now_students int
+	Lanuched     bool
 }
 
 var (
@@ -86,10 +87,11 @@ func AddCourse(course_name string, teacher string, max_students int) error {
 		return fmt.Errorf("course %s already exists", course_name)
 	}
 	new_course := CourseInfo{
-		course_name:  course_name,
-		teacher:      teacher,
-		max_students: max_students,
-		now_students: 0,
+		Course_name:  course_name,
+		Teacher:      teacher,
+		Max_students: max_students,
+		Now_students: 0,
+		Lanuched:     false,
 	}
 	course_info_map.WritePair(course_name, &new_course)
 	return nil
@@ -105,9 +107,9 @@ func ModifyCourse(course_id string, course_name string, teacher string, max_stud
 		course_logger.Log(logger.WARN, "Modification failed: Course %s does not exist", course_id)
 		return fmt.Errorf("course %s does not exist", course_id)
 	}
-	course_info.course_name = course_name
-	course_info.teacher = teacher
-	course_info.max_students = max_students
+	course_info.Course_name = course_name
+	course_info.Teacher = teacher
+	course_info.Max_students = max_students
 	course_info_map.WritePair(course_id, &course_info)
 	return nil
 }
@@ -139,14 +141,14 @@ func SelectCourse(uid string, course_id string) error {
 		return fmt.Errorf("course %s is not launched", course_id)
 	}
 	course_info, _ := course_info_map.ReadPair(course_id)
-	if course_info.now_students >= course_info.max_students {
+	if course_info.Now_students >= course_info.Max_students {
 		course_logger.Log(logger.WARN, "Selection failed: Course %s is full", course_id)
 		return fmt.Errorf("course %s is full", course_id)
 	}
 	user_map, _ := course_user_map.ReadPair(course_id)
 	user_map.WritePair(uid, &struct{}{})
 	user_course_map.WritePair(uid, &course_id)
-	course_info.now_students++
+	course_info.Now_students++
 	course_info_map.WritePair(course_id, &course_info)
 	course_logger.Log(logger.INFO, "User %s selected course %s successfully", uid, course_id)
 	return nil
@@ -166,7 +168,7 @@ func DropCourse(uid string) error {
 	user_map.DeletePair(uid)
 	user_course_map.DeletePair(uid)
 	course_info, _ := course_info_map.ReadPair(course_id)
-	course_info.now_students--
+	course_info.Now_students--
 	course_info_map.WritePair(course_id, &course_info)
 	course_logger.Log(logger.INFO, "User %s dropped course %s successfully", uid, course_id)
 	return nil

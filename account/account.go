@@ -8,15 +8,15 @@ import (
 )
 
 type ClassID struct {
-	grade_ int
-	class_ int
+	Grade_ int
+	Class_ int
 }
 
 type UserInfo struct {
-	uid_       string
-	password_  string
-	class_id_  ClassID
-	priviledge int
+	Uid_        string
+	Password_   string
+	Class_id_   ClassID
+	Privilege_ int
 }
 
 var (
@@ -31,21 +31,34 @@ const (
 )
 
 const (
-	PRIVILEDGE_STUDENT = 0
-	PRIVILEDGE_TEACHER = 1
-	PRIVILEDGE_ADMIN   = 2
+	PRIVILEGE_STUDENT = 0
+	PRIVILEGE_TEACHER = 1
+	PRIVILEGE_ADMIN   = 2
 )
 
-func stringToPriviledge(priv string) int {
+func stringToPrivilege(priv string) int {
 	switch priv {
 	case "student":
-		return PRIVILEDGE_STUDENT
+		return PRIVILEGE_STUDENT
 	case "teacher":
-		return PRIVILEDGE_TEACHER
+		return PRIVILEGE_TEACHER
 	case "admin":
-		return PRIVILEDGE_ADMIN
+		return PRIVILEGE_ADMIN
 	default:
-		return PRIVILEDGE_STUDENT
+		return PRIVILEGE_STUDENT
+	}
+}
+
+func PrivilegeToString(privilege int) string {
+	switch privilege {
+	case PRIVILEGE_STUDENT:
+		return "student"
+	case PRIVILEGE_TEACHER:
+		return "teacher"
+	case PRIVILEGE_ADMIN:
+		return "admin"
+	default:
+		return "unknown"
 	}
 }
 
@@ -56,9 +69,9 @@ func InitAccountSystem() {
 	user_info_map.Load(USERINFOPATH)
 	if _, ok := user_info_map.ReadPair("admin"); !ok {
 		admin_info := &UserInfo{
-			uid_:      "admin",
-			password_: "123456",
-			class_id_: ClassID{grade_: 0, class_: 0},
+			Uid_:      "admin",
+			Password_: "123456",
+			Class_id_: ClassID{Grade_: 0, Class_: 0},
 		}
 		user_info_map.WritePair("admin", admin_info)
 	}
@@ -78,19 +91,19 @@ func StoreAccountData() {
 	account_logger.Log(logger.INFO, "Account data stored successfully")
 }
 
-func Register(uid string, password string, grade int, class int, priviledge string) error {
+func Register(uid string, password string, grade int, class int, privilege string) error {
 	if _, ok := user_info_map.ReadPair(uid); ok {
 		account_logger.Log(logger.WARN, "Registration failed: User %s already exists", uid)
 		return fmt.Errorf("user %s already exists", uid)
 	}
 	new_user := UserInfo{
-		uid_:       uid,
-		password_:  password,
-		class_id_:  ClassID{grade_: grade, class_: class},
-		priviledge: stringToPriviledge(priviledge),
+		Uid_:        uid,
+		Password_:   password,
+		Class_id_:   ClassID{Grade_: grade, Class_: class},
+		Privilege_: stringToPrivilege(privilege),
 	}
 	user_info_map.WritePair(uid, &new_user)
-	class_id := ClassID{grade_: grade, class_: class}
+	class_id := ClassID{Grade_: grade, Class_: class}
 	class_map, ok := class_user_map.ReadPair(class_id)
 	if !ok {
 		class_map = concurrentmap.NewConcurrentMap[string, struct{}]()
@@ -107,7 +120,7 @@ func RemoveUser(uid string) error {
 		return fmt.Errorf("user %s does not exist", uid)
 	}
 	user_info_map.DeletePair(uid)
-	class_id := user_info.class_id_
+	class_id := user_info.Class_id_
 	class_map, ok := class_user_map.ReadPair(class_id)
 	if !ok {
 		account_logger.Log(logger.ERROR, "Inconsistent state: Class %v for user %s does not exist", class_id, uid)
@@ -124,12 +137,12 @@ func LogIn(uid string, password string) (int, error) {
 		account_logger.Log(logger.WARN, "Login failed: User %s does not exist", uid)
 		return 0, fmt.Errorf("user %s does not exist", uid)
 	}
-	if user_info.password_ != password {
+	if user_info.Password_ != password {
 		account_logger.Log(logger.WARN, "Login failed: Incorrect password for user %s", uid)
 		return 0, fmt.Errorf("incorrect password for user %s", uid)
 	}
 	account_logger.Log(logger.INFO, "User %s logged in successfully", uid)
-	return user_info.priviledge, nil
+	return user_info.Privilege_, nil
 }
 
 func ModifyPassword(uid string, new_password string) error {
@@ -138,7 +151,7 @@ func ModifyPassword(uid string, new_password string) error {
 		account_logger.Log(logger.WARN, "Password modification failed: User %s does not exist", uid)
 		return fmt.Errorf("user %s does not exist", uid)
 	}
-	user_info.password_ = new_password
+	user_info.Password_ = new_password
 	user_info_map.WritePair(uid, &user_info)
 	account_logger.Log(logger.INFO, "Password for user %s modified successfully", uid)
 	return nil
@@ -154,7 +167,7 @@ func GetUserInfo(uid string) (*UserInfo, error) {
 }
 
 func GetClassUsersInfo(grade int, class int) ([]*UserInfo, error) {
-	class_id := ClassID{grade_: grade, class_: class}
+	class_id := ClassID{Grade_: grade, Class_: class}
 	class_map, ok := class_user_map.ReadPair(class_id)
 	if !ok {
 		account_logger.Log(logger.WARN, "GetClassUsers failed: Class %v does not exist", class_id)

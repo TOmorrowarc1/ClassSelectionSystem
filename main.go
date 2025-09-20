@@ -3,15 +3,16 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"github.com/TOmorrowarc1/ClassSelectionSystem/account"
-	"github.com/TOmorrowarc1/ClassSelectionSystem/course"
-	"github.com/TOmorrowarc1/ClassSelectionSystem/priviledge"
-	"github.com/TOmorrowarc1/ClassSelectionSystem/utils/logger"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/TOmorrowarc1/ClassSelectionSystem/account"
+	"github.com/TOmorrowarc1/ClassSelectionSystem/course"
+	"github.com/TOmorrowarc1/ClassSelectionSystem/privilege"
+	"github.com/TOmorrowarc1/ClassSelectionSystem/utils/logger"
 )
 
 var (
@@ -26,7 +27,7 @@ func main() {
 	system_logger.Log(logger.INFO, "System starting...")
 	account.InitAccountSystem()
 	course.InitCourseSystem()
-	priviledge.InitPriviledgeSystem()
+	privilege.InitPrivilegeSystem()
 	system_logger.Log(logger.INFO, "All systems initialized.")
 
 	mux := http.NewServeMux()
@@ -86,9 +87,9 @@ func RequestRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var priviledge_level int
+	var privilege_level int
 	if req.Action != "LogIn" {
-		priviledge_level, err = priviledge.UserAccess(req.Token)
+		privilege_level, err = privilege.UserAccess(req.Token)
 		if err != nil {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
@@ -97,62 +98,463 @@ func RequestRoute(w http.ResponseWriter, r *http.Request) {
 
 	switch req.Action {
 	case "Register":
-		HandleRegister(w, req.Parameters, priviledge_level)
+		HandleRegister(w, req.Parameters, privilege_level)
 	case "Remove":
-		HandleRemove(w, req.Parameters, priviledge_level)
+		HandleRemove(w, req.Parameters, privilege_level)
 	case "LogIn":
 		HandleLogIn(w, req.Parameters)
 	case "LogOut":
-		HandleLogOut(w, req.Parameters)
+		HandleLogOut(w, req.Token)
 	case "ModifyPassword":
 		HandleModifyPassword(w, req.Parameters)
 	case "GetUserInfo":
-		HandleGetUserInfo(w, req.Parameters, priviledge_level)
+		HandleGetUserInfo(w, req.Parameters, privilege_level)
 	case "GetAllUsersInfo":
-		HandleGetAllUsersInfo(w, req.Parameters, priviledge_level)
+		HandleGetAllUsersInfo(w, req.Parameters, privilege_level)
 	case "GetPartUsersInfo":
-		HandleGetPartUsersInfo(w, req.Parameters, priviledge_level)
+		HandleGetPartUsersInfo(w, req.Parameters, privilege_level)
 	case "AddCourse":
-		HandleAddCourse(w, req.Parameters, priviledge_level)
+		HandleAddCourse(w, req.Parameters, privilege_level)
 	case "ModifyCourse":
-		HandleModifyCourse(w, req.Parameters, priviledge_level)
+		HandleModifyCourse(w, req.Parameters, privilege_level)
 	case "LaunchCourse":
-		HandleLaunchCourse(w, req.Parameters, priviledge_level)
+		HandleLaunchCourse(w, req.Parameters, privilege_level)
 	case "GetAllCoursesInfo":
 		HandleGetAllCoursesInfo(w, req.Parameters)
 	case "SelectCourse":
-		HandleSelectCourse(w, req.Parameters, priviledge_level)
+		HandleSelectCourse(w, req.Parameters, privilege_level)
 	case "DropCourse":
-		HandleDropCourse(w, req.Parameters, priviledge_level)
+		HandleDropCourse(w, req.Parameters, privilege_level)
 	default:
 		http.Error(w, "Unknown action", http.StatusBadRequest)
 	}
 }
 
-func HandleRegister(w http.ResponseWriter, parameters json.RawMessage, priviledge int) {}
+// Typical logic for my work handler: (check privilege), decode parameters, execute the corresponding function and write back http reponse.
+func HandleRegister(w http.ResponseWriter, parameters json.RawMessage, privilege int) {
+	type Parameters struct {
+		User_name     string `json:"username"`
+		Password      string `json:"password"`
+		Identity_info struct {
+			Class struct {
+				Grade int `json:"grade"`
+				Class int `json:"class"`
+			}
+			Privilege string `json:"privilege"`
+		}
+	}
+	type Response struct {
+		Message string `json:"errorMessage"`
+	}
 
-func HandleRemove(w http.ResponseWriter, parameters json.RawMessage, priviledge int) {}
+	w.Header().Set("Content-Type", "application/json")
+	var response Response
+	if privilege < account.PRIVILEGE_ADMIN {
+		response.Message = "Permission denied"
+	} else {
+		var params Parameters
+		err := json.Unmarshal(parameters, &params)
+		if err != nil {
+			response.Message = "Invalid parameters"
+		} else {
+			err = account.Register(params.User_name, params.Password, params.Identity_info.Class.Grade, params.Identity_info.Class.Class, params.Identity_info.Privilege)
+			if err != nil {
+				response.Message = err.Error()
+			}
+		}
+	}
+	json.NewEncoder(w).Encode(response)
+}
 
-func HandleLogIn(w http.ResponseWriter, parameters json.RawMessage) {}
+func HandleRemove(w http.ResponseWriter, parameters json.RawMessage, privilege int) {
+	type Parameters struct {
+		User_name string `json:"username"`
+	}
+	type Response struct {
+		Message string `json:"errorMessage"`
+	}
 
-func HandleLogOut(w http.ResponseWriter, parameters json.RawMessage) {}
+	w.Header().Set("Content-Type", "application/json")
+	var response Response
+	if privilege < account.PRIVILEGE_ADMIN {
+		response.Message = "Permission denied"
+	} else {
+		var params Parameters
+		err := json.Unmarshal(parameters, &params)
+		if err != nil {
+			response.Message = "Invalid parameters"
+		} else {
+			err = account.RemoveUser(params.User_name)
+			if err != nil {
+				response.Message = err.Error()
+			}
+		}
+	}
+	json.NewEncoder(w).Encode(response)
+}
 
-func HandleModifyPassword(w http.ResponseWriter, parameters json.RawMessage) {}
+func HandleLogIn(w http.ResponseWriter, parameters json.RawMessage) {
+	type Parameters struct {
+		User_name string `json:"name"`
+		Password  string `json:"password"`
+	}
+	type Response struct {
+		Token   string `json:"authToken"`
+		Message string `json:"errorMessage"`
+	}
 
-func HandleGetUserInfo(w http.ResponseWriter, parameters json.RawMessage, priviledge int) {}
+	w.Header().Set("Content-Type", "application/json")
+	var response Response
+	var params Parameters
+	err := json.Unmarshal(parameters, &params)
+	if err != nil {
+		response.Message = "Invalid parameters"
+	} else {
+		privilege_level, err := account.LogIn(params.User_name, params.Password)
+		if err != nil {
+			response.Message = err.Error()
+		} else {
+			response.Token = privilege.UserLogIn(privilege_level)
+		}
+	}
+	json.NewEncoder(w).Encode(response)
+}
 
-func HandleGetAllUsersInfo(w http.ResponseWriter, parameters json.RawMessage, priviledge int) {}
+func HandleLogOut(w http.ResponseWriter, token string) {
+	type Response struct {
+		Message string `json:"errorMessage"`
+	}
 
-func HandleGetPartUsersInfo(w http.ResponseWriter, parameters json.RawMessage, priviledge int) {}
+	w.Header().Set("Content-Type", "application/json")
+	var response Response
+	err := privilege.UserLogOut(token)
+	if err != nil {
+		response.Message = err.Error()
+	}
+	json.NewEncoder(w).Encode(response)
+}
 
-func HandleAddCourse(w http.ResponseWriter, parameters json.RawMessage, priviledge int) {}
+func HandleModifyPassword(w http.ResponseWriter, parameters json.RawMessage) {
+	type Parameters struct {
+		User_name string `json:"name"`
+		Password  string `json:"password"`
+	}
+	type Response struct {
+		Message string `json:"errorMessage"`
+	}
 
-func HandleModifyCourse(w http.ResponseWriter, parameters json.RawMessage, priviledge int) {}
+	w.Header().Set("Content-Type", "application/json")
+	var response Response
+	var params Parameters
+	err := json.Unmarshal(parameters, &params)
+	if err != nil {
+		response.Message = "Invalid parameters"
+	} else {
+		err = account.ModifyPassword(params.User_name, params.Password)
+		if err != nil {
+			response.Message = err.Error()
+		}
+	}
+	json.NewEncoder(w).Encode(response)
+}
 
-func HandleLaunchCourse(w http.ResponseWriter, parameters json.RawMessage, priviledge int) {}
+type UserInfo struct {
+	User_name     string `json:"name"`
+	Password      string `json:"password"`
+	Identity_info struct {
+		Class struct {
+			Grade int `json:"grade"`
+			Class int `json:"class"`
+		}
+		Privilege string `json:"privilege"`
+	}
+}
 
-func HandleGetAllCoursesInfo(w http.ResponseWriter, parameters json.RawMessage) {}
+func userInfoConstruct(user_info *account.UserInfo) UserInfo {
+	var user UserInfo
+	user.User_name = user_info.Uid_
+	user.Password = user_info.Password_
+	user.Identity_info.Class.Grade = user_info.Class_id_.Grade_
+	user.Identity_info.Class.Class = user_info.Class_id_.Class_
+	user.Identity_info.Privilege = account.PrivilegeToString(user_info.Privilege_)
+	return user
+}
 
-func HandleSelectCourse(w http.ResponseWriter, parameters json.RawMessage, priviledge int) {}
+func HandleGetUserInfo(w http.ResponseWriter, parameters json.RawMessage, privilege int) {
+	type Parameters struct {
+		User_name string `json:"name"`
+	}
+	type Response struct {
+		User_info UserInfo
+		Message   string `json:"errorMessage"`
+	}
 
-func HandleDropCourse(w http.ResponseWriter, parameters json.RawMessage, priviledge int) {}
+	w.Header().Set("Content-Type", "application/json")
+	var response Response
+	if privilege < account.PRIVILEGE_TEACHER {
+		response.Message = "Permission denied"
+	} else {
+		var params Parameters
+		err := json.Unmarshal(parameters, &params)
+		if err != nil {
+			response.Message = "Invalid parameters"
+		} else {
+			user_info, err := account.GetUserInfo(params.User_name)
+			if err != nil {
+				response.Message = err.Error()
+			} else {
+				user := userInfoConstruct(user_info)
+				response.User_info = user
+			}
+		}
+	}
+	json.NewEncoder(w).Encode(response)
+}
+
+func HandleGetAllUsersInfo(w http.ResponseWriter, parameters json.RawMessage, privilege int) {
+	type Response struct {
+		Users   []UserInfo `json:"users"`
+		Message string     `json:"errorMessage"`
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	var response Response
+	if privilege < account.PRIVILEGE_ADMIN {
+		response.Message = "Permission denied"
+	} else {
+		all_users := account.GetAllUsersInfo()
+		for _, user_info := range all_users {
+			user := userInfoConstruct(user_info)
+			response.Users = append(response.Users, user)
+		}
+	}
+	json.NewEncoder(w).Encode(response)
+}
+
+func HandleGetPartUsersInfo(w http.ResponseWriter, parameters json.RawMessage, privilege int) {
+	type Parameters struct {
+		Way   int `json:"way"` // 0 for class, 1 for course
+		Class struct {
+			Grade int `json:"grade"`
+			Class int `json:"class"`
+		}
+		Course_id string `json:"courseName"`
+	}
+
+	type Response struct {
+		Users   []UserInfo `json:"users"`
+		Message string     `json:"errorMessage"`
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	var response Response
+	if privilege < account.PRIVILEGE_TEACHER {
+		response.Message = "Permission denied"
+	} else {
+		var params Parameters
+		err := json.Unmarshal(parameters, &params)
+		if err != nil {
+			response.Message = "Invalid parameters"
+		} else {
+			if params.Way == 0 {
+				users, err := account.GetClassUsersInfo(params.Class.Grade, params.Class.Class)
+				if err != nil {
+					response.Message = err.Error()
+				} else {
+					for _, user_info := range users {
+						user := userInfoConstruct(user_info)
+						response.Users = append(response.Users, user)
+					}
+				}
+			} else if params.Way == 1 {
+				users, err := account.GetCourseUsersInfo(params.Course_id)
+				if err != nil {
+					response.Message = err.Error()
+				} else {
+					for _, user_info := range users {
+						user := userInfoConstruct(user_info)
+						response.Users = append(response.Users, user)
+					}
+				}
+			} else {
+				response.Message = "Invalid way"
+			}
+		}
+	}
+	json.NewEncoder(w).Encode(response)
+}
+
+type CourseInfo struct {
+	Course_name  string `json:"name"`
+	Teacher_name string `json:"teacherName"`
+	Max_student  int    `json:"maximum"`
+}
+
+func HandleAddCourse(w http.ResponseWriter, parameters json.RawMessage, privilege int) {
+	type Parameters struct {
+		Course_Info CourseInfo `json:"courseInfo"`
+	}
+	type Response struct {
+		Message string `json:"errorMessage"`
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	var response Response
+	if privilege < account.PRIVILEGE_ADMIN {
+		response.Message = "Permission denied"
+	} else {
+		var params Parameters
+		err := json.Unmarshal(parameters, &params)
+		if err != nil {
+			response.Message = "Invalid parameters"
+		} else {
+			err = course.AddCourse(params.Course_Info.Course_name, params.Course_Info.Teacher_name, params.Course_Info.Max_student)
+			if err != nil {
+				response.Message = err.Error()
+			}
+		}
+	}
+	json.NewEncoder(w).Encode(response)
+}
+
+func HandleModifyCourse(w http.ResponseWriter, parameters json.RawMessage, privilege int) {
+	type Parameters struct {
+		Course_Name string     `json:"courseName"`
+		Course_Info CourseInfo `json:"courseInfo"`
+	}
+	type Response struct {
+		Message string `json:"errorMessage"`
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	var response Response
+	if privilege < account.PRIVILEGE_ADMIN {
+		response.Message = "Permission denied"
+	} else {
+		var params Parameters
+		err := json.Unmarshal(parameters, &params)
+		if err != nil {
+			response.Message = "Invalid parameters"
+		} else {
+			err = course.ModifyCourse(params.Course_Name, params.Course_Info.Course_name, params.Course_Info.Teacher_name, params.Course_Info.Max_student)
+			if err != nil {
+				response.Message = err.Error()
+			}
+		}
+	}
+	json.NewEncoder(w).Encode(response)
+}
+
+func HandleLaunchCourse(w http.ResponseWriter, parameters json.RawMessage, privilege int) {
+	type Parameters struct {
+		Course_Name string `json:"courseName"`
+	}
+	type Response struct {
+		Message string `json:"errorMessage"`
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	var response Response
+	if privilege < account.PRIVILEGE_ADMIN {
+		response.Message = "Permission denied"
+	} else {
+		var params Parameters
+		err := json.Unmarshal(parameters, &params)
+		if err != nil {
+			response.Message = "Invalid parameters"
+		} else {
+			err = course.LaunchCourse(params.Course_Name)
+			if err != nil {
+				response.Message = err.Error()
+			}
+		}
+	}
+	json.NewEncoder(w).Encode(response)
+}
+
+type CourseFullInfo struct {
+	Course_name  string `json:"name"`
+	Teacher_name string `json:"teacherName"`
+	Max_students int    `json:"maximum"`
+	Now_students int    `json:"current"`
+	Lanuched     bool   `json:"launched"`
+}
+
+func courseFullInfoConstruct(course_info *course.CourseInfo) CourseFullInfo {
+	var course CourseFullInfo
+	course.Course_name = course_info.Course_name
+	course.Teacher_name = course_info.Teacher
+	course.Max_students = course_info.Max_students
+	course.Now_students = course_info.Now_students
+	course.Lanuched = course_info.Lanuched
+	return course
+}
+func HandleGetAllCoursesInfo(w http.ResponseWriter, parameters json.RawMessage) {
+	type Response struct {
+		Courses []CourseFullInfo `json:"courses"`
+		Message string           `json:"errorMessage"`
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	var response Response
+	all_courses := course.GetAllCoursesInfo()
+	for _, course_info := range all_courses {
+		course_full_info := courseFullInfoConstruct(course_info)
+		response.Courses = append(response.Courses, course_full_info)
+	}
+	json.NewEncoder(w).Encode(response)
+}
+
+func HandleSelectCourse(w http.ResponseWriter, parameters json.RawMessage, privilege int) {
+	type Parameters struct {
+		Course_Name string `json:"courseName"`
+		UserName    string `json:"name"`
+	}
+	type Response struct {
+		Message string `json:"errorMessage"`
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	var response Response
+	if privilege != account.PRIVILEGE_STUDENT {
+		response.Message = "Only students can select courses"
+	} else {
+		var params Parameters
+		err := json.Unmarshal(parameters, &params)
+		if err != nil {
+			response.Message = "Invalid parameters"
+		} else {
+			err = course.SelectCourse(params.UserName, params.Course_Name)
+			if err != nil {
+				response.Message = err.Error()
+			}
+		}
+	}
+	json.NewEncoder(w).Encode(response)
+}
+
+func HandleDropCourse(w http.ResponseWriter, parameters json.RawMessage, privilege int) {
+	type Parameters struct {
+		UserName string `json:"name"`
+	}
+	type Response struct {
+		Message string `json:"errorMessage"`
+	}
+	w.Header().Set("Content-Type", "application/json")
+	var response Response
+	if privilege != account.PRIVILEGE_STUDENT {
+		response.Message = "Only students can drop courses"
+	} else {
+		var params Parameters
+		err := json.Unmarshal(parameters, &params)
+		if err != nil {
+			response.Message = "Invalid parameters"
+		} else {
+			err = course.DropCourse(params.UserName)
+			if err != nil {
+				response.Message = err.Error()
+			}
+		}
+	}
+	json.NewEncoder(w).Encode(response)
+}
