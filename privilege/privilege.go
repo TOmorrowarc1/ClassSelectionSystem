@@ -8,51 +8,56 @@ import (
 	"github.com/TOmorrowarc1/ClassSelectionSystem/utils/logger"
 )
 
-const LENGTH = 16
+type AccountInfo struct {
+	UserName  string
+	Privilege int
+}
+
+const Length = 16
 
 var (
-	privilege_map    *concurrentmap.ConcurrentMap[string, int]
-	privilege_logger *logger.Logger
+	privilegeMap    *concurrentmap.ConcurrentMap[string, AccountInfo]
+	privilegeLogger *logger.Logger
 )
 
 func InitPrivilegeSystem() {
-	privilege_map = concurrentmap.NewConcurrentMap[string, int]()
-	privilege_logger = logger.GetLogger()
-	// The privilege_map is not persisted.
+	privilegeMap = concurrentmap.NewConcurrentMap[string, AccountInfo]()
+	privilegeLogger = logger.GetLogger()
+	// The privilegeMap is not persisted.
 }
 
 func generateToken() string {
 	// Generate a random token of LENGTH bytes and return its hex encoding, which written by the Gemini.
-	randomBytes := make([]byte, LENGTH)
+	randomBytes := make([]byte, Length)
 	_, err := rand.Read(randomBytes)
 	if err != nil {
-		privilege_logger.Log(logger.ERROR, "Failed to generate random bytes: %v", err)
+		privilegeLogger.Log(logger.Error, "Failed to generate random bytes: %v", err)
 		return ""
 	}
 	return hex.EncodeToString(randomBytes)
 }
 
-func UserLogIn(privilege int) string {
+func UserLogIn(accountInfo AccountInfo) string {
 	token := generateToken()
-	privilege_map.WritePair(token, &privilege)
-	privilege_logger.Log(logger.INFO, "An user with privilege %d get token %s", privilege, token)
+	privilegeMap.WritePair(token, &accountInfo)
+	privilegeLogger.Log(logger.Info, "User %s with privilege %d get token %s", accountInfo.UserName, accountInfo.Privilege, token)
 	return token
 }
 
-func UserAccess(token string) (int, error) {
-	if privilege, ok := privilege_map.ReadPair(token); ok {
-		return privilege, nil
+func UserAccess(token string) (AccountInfo, error) {
+	if accountInfo, ok := privilegeMap.ReadPair(token); ok {
+		return accountInfo, nil
 	}
-	privilege_logger.Log(logger.WARN, "Access denied: Invalid token %s", token)
-	return 0, fmt.Errorf("invalid token %s", token)
+	privilegeLogger.Log(logger.Warn, "Access denied: Invalid token %s", token)
+	return AccountInfo{}, fmt.Errorf("invalid token %s", token)
 }
 
 func UserLogOut(token string) error {
-	if _, ok := privilege_map.ReadPair(token); !ok {
-		privilege_map.DeletePair(token)
-		privilege_logger.Log(logger.INFO, "Token %s logged out successfully", token)
+	if _, ok := privilegeMap.ReadPair(token); !ok {
+		privilegeMap.DeletePair(token)
+		privilegeLogger.Log(logger.Info, "Token %s logged out successfully", token)
 		return nil
 	}
-	privilege_logger.Log(logger.WARN, "Logout failed: Invalid token %s", token)
+	privilegeLogger.Log(logger.Warn, "Logout failed: Invalid token %s", token)
 	return fmt.Errorf("invalid token %s", token)
 }
