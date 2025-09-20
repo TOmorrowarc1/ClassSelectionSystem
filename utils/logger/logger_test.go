@@ -12,7 +12,7 @@ const LOGFILE = "test.log"
 
 func TestLogger(t *testing.T) {
 	test_instance := GetLogger()
-	test_instance.SetLogLevel(INFO)
+	test_instance.SetLogLevel(Info)
 	err := test_instance.SetLogFile(LOGFILE)
 	if err != nil {
 		t.Errorf("Failed to set log file: %v", err)
@@ -22,9 +22,9 @@ func TestLogger(t *testing.T) {
 		wg.Add(1)
 		go func(thread_id int) {
 			defer wg.Done()
-			level := DEBUG
+			level := Debug
 			if thread_id%3 == 0 {
-				level = INFO
+				level = Info
 			}
 			for index := 0; index < LOGCOUNT; index++ {
 				test_instance.Log(level, "Thread %d: log message %d", thread_id, index)

@@ -10,19 +10,19 @@ import (
 type LogLevel int
 
 const (
-	DEBUG LogLevel = iota
-	INFO
-	WARN
-	ERROR
-	FATAL
+	Debug LogLevel = iota
+	Info
+	Warn
+	Error
+	Fatal
 )
 
 type Logger struct {
-	level_       LogLevel
-	lock_        sync.Mutex
-	log_channel_ chan string
-	waitgroup_   sync.WaitGroup
-	log_file     *os.File
+	level      LogLevel
+	lock       sync.Mutex
+	logChannel chan string
+	waitGroup  sync.WaitGroup
+	logFile    *os.File
 }
 
 var (
@@ -33,60 +33,60 @@ var (
 func GetLogger() *Logger {
 	once.Do(func() {
 		logger_instance = &Logger{
-			level_:       DEBUG,
-			log_channel_: make(chan string, 100),
+			level:      Debug,
+			logChannel: make(chan string, 100),
 		}
-		logger_instance.waitgroup_.Add(1)
+		logger_instance.waitGroup.Add(1)
 		go logger_instance.output()
 	})
 	return logger_instance
 }
 
 func (l *Logger) SetLogFile(filePath string) error {
-	l.lock_.Lock()
-	defer l.lock_.Unlock()
-	if l.log_file != nil {
-		l.log_file.Close()
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	if l.logFile != nil {
+		l.logFile.Close()
 	}
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
-	l.log_file = file
+	l.logFile = file
 	return nil
 }
 
 func (l *Logger) SetLogLevel(level LogLevel) {
-	l.lock_.Lock()
-	defer l.lock_.Unlock()
-	l.level_ = level
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	l.level = level
 }
 
 func (l *Logger) Log(level LogLevel, format string, args ...interface{}) {
-	l.lock_.Lock()
-	defer l.lock_.Unlock()
-	if level < l.level_ {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	if level < l.level {
 		return
 	}
 	message := fmt.Sprintf(format, args...)
 	logMessage := fmt.Sprintf("[%s] %s", levelToString(level), message)
-	l.log_channel_ <- logMessage
+	l.logChannel <- logMessage
 }
 
 func (l *Logger) Close() {
-	close(l.log_channel_)
-	l.waitgroup_.Wait()
-	if l.log_file != nil {
-		l.log_file.Close()
+	close(l.logChannel)
+	l.waitGroup.Wait()
+	if l.logFile != nil {
+		l.logFile.Close()
 	}
 }
 
 func (l *Logger) output() {
-	defer l.waitgroup_.Done()
-	for logMessage := range l.log_channel_ {
+	defer l.waitGroup.Done()
+	for logMessage := range l.logChannel {
 		now := time.Now().Format("2006-01-02 15:04:05")
 		msg := fmt.Sprintf("%s %s\n", now, logMessage)
-		_, err := l.log_file.Write([]byte(msg))
+		_, err := l.logFile.Write([]byte(msg))
 		if err != nil {
 			fmt.Printf("Failed to write log to file: %v\n", err)
 		}
@@ -95,15 +95,15 @@ func (l *Logger) output() {
 
 func levelToString(level LogLevel) string {
 	switch level {
-	case DEBUG:
+	case Debug:
 		return "DEBUG"
-	case INFO:
+	case Info:
 		return "INFO"
-	case WARN:
+	case Warn:
 		return "WARN"
-	case ERROR:
+	case Error:
 		return "ERROR"
-	case FATAL:
+	case Fatal:
 		return "FATAL"
 	default:
 		return "UNKNOWN"
