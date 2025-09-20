@@ -36,7 +36,7 @@ const (
 	PrivilegeAdmin   = 2
 )
 
-func stringToPrivilege(privilege string) int {
+func StringToPrivilege(privilege string) int {
 	switch privilege {
 	case "student":
 		return PrivilegeStudent
