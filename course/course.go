@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/TOmorrowarc1/ClassSelectionSystem/utils/concurrentmap"
 	"github.com/TOmorrowarc1/ClassSelectionSystem/utils/logger"
+	"sync"
 )
 
 type CourseInfo struct {
@@ -20,6 +21,8 @@ var (
 	courseUserMap *concurrentmap.ConcurrentMap[string, *concurrentmap.ConcurrentMap[string, struct{}]]
 	userCourseMap *concurrentmap.ConcurrentMap[string, string]
 	courseLogger  *logger.Logger
+	// For only one concurrent operation holds(or rely on the consistency of) data outside the map: SelectCourse() and DropCourse().
+	courseMutex sync.Mutex
 )
 
 func InitCourseSystem() {
@@ -132,6 +135,8 @@ func LaunchCourse(courseName string) error {
 }
 
 func SelectCourse(uid string, courseName string) error {
+	courseMutex.Lock()
+	defer courseMutex.Unlock()
 	if _, ok := userCourseMap.ReadPair(uid); ok {
 		courseLogger.Log(logger.Warn, "Selection failed: User %s has already selected a course", uid)
 		return fmt.Errorf("user %s has already selected a course", uid)
@@ -155,6 +160,8 @@ func SelectCourse(uid string, courseName string) error {
 }
 
 func DropCourse(uid string) error {
+	courseMutex.Lock()
+	defer courseMutex.Unlock()
 	courseName, ok := userCourseMap.ReadPair(uid)
 	if !ok {
 		courseLogger.Log(logger.Warn, "Drop failed: User %s has not selected any course", uid)
