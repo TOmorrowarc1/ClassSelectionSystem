@@ -69,9 +69,10 @@ func InitAccountSystem() {
 	userInfoMap.Load(userInfoPath)
 	if _, ok := userInfoMap.ReadPair("admin"); !ok {
 		admin_info := &UserInfo{
-			Uid:      "admin",
-			Password: "123456",
-			Classid:  ClassID{Grade: 0, Class: 0},
+			Uid:       "admin",
+			Password:  "123456",
+			Classid:   ClassID{Grade: 0, Class: 0},
+			Privilege: PrivilegeAdmin,
 		}
 		userInfoMap.WritePair("admin", admin_info)
 	}

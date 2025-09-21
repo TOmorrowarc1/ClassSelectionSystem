@@ -1,3 +1,4 @@
 ./out
 ClassSelectionSystem
 .vscode/
+*.log
