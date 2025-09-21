@@ -53,7 +53,7 @@ func UserAccess(token string) (AccountInfo, error) {
 }
 
 func UserLogOut(token string) error {
-	if _, ok := privilegeMap.ReadPair(token); !ok {
+	if _, ok := privilegeMap.ReadPair(token); ok {
 		privilegeMap.DeletePair(token)
 		privilegeLogger.Log(logger.Info, "Token %s logged out successfully", token)
 		return nil
