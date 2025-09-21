@@ -6,7 +6,7 @@ The project view all users in three levels: the monitor, teachers and students.
 The operations and the priviledge requiring at least are as follows:
 1. Account System:
    1. Register[Monitor]: create a new account and set its name, identity and initial password. The name and password should be [a-zA-Z0-9_]* in 10 words,
-   and temporarily the identity includes the user's previledge and class it is in.
+   and temporarily the identity includes the user's privilege and class it is in.
    2. Remove[Monitor]: erase a account from the whole system, actually behaving
    as enforcing the user to log out immediately and have no ability to come back.
    3. LogIn[Student]: use account and password to log into the system.
@@ -48,7 +48,7 @@ We design the Web communication in a hidden-backend way, which means that the fr
             "password":
             "identityInfo":{
                "class":{"grade":,"class":}
-               "previledge":
+               "privilege":
             }
          }
       }
@@ -146,7 +146,7 @@ We design the Web communication in a hidden-backend way, which means that the fr
             "password": "string",
             "identityInfo": {
                "class": {"grade": int, "class": int},
-               "previledge": int
+               "privilege": int
             }
          },
          "errorMessage": "string, empty when no error",
@@ -159,7 +159,7 @@ We design the Web communication in a hidden-backend way, which means that the fr
                "password": "string",
                "identityInfo": {
                   "class": {"grade": int, "class": int},
-                  "previledge": int
+                  "privilege": int
                },
             },
             ...
@@ -173,7 +173,7 @@ We design the Web communication in a hidden-backend way, which means that the fr
                "password": "string",
                "identityInfo": {
                   "class": {"grade": int, "class": int},
-                  "previledge": int
+                  "privilege": int
                }
             },
             ...
