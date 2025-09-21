@@ -479,7 +479,7 @@ type CourseFullInfo struct {
 	TeacherName string `json:"teacherName"`
 	MaxStudents int    `json:"maximum"`
 	NowStudents int    `json:"current"`
-	Lanuched    bool   `json:"launched"`
+	Launched    bool   `json:"launched"`
 }
 
 func courseFullInfoConstruct(course_info *course.CourseInfo) CourseFullInfo {
@@ -488,7 +488,7 @@ func courseFullInfoConstruct(course_info *course.CourseInfo) CourseFullInfo {
 	course.TeacherName = course_info.Teacher
 	course.MaxStudents = course_info.MaxStudents
 	course.NowStudents = course_info.NowStudents
-	course.Lanuched = course_info.Lanuched
+	course.Launched = course_info.Launched
 	return course
 }
 

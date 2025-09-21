@@ -15,9 +15,9 @@ import (
 // 它在内存中创建所有需要的数据结构，避免了对文件系统的依赖。
 func setupCourseTest() {
 	courseInfoMap = concurrentmap.NewConcurrentMap[string, CourseInfo]()
-	// 注意：您的代码中存在拼写错误 "Lanuched"，为了让测试能够编译通过，这里保持一致。
+	// 注意：您的代码中存在拼写错误 "launched"，为了让测试能够编译通过，这里保持一致。
 	// 建议在未来将其更正为 "Launched"。
-	lanuchedMap = concurrentmap.NewConcurrentMap[string, struct{}]()
+	launchedMap = concurrentmap.NewConcurrentMap[string, struct{}]()
 	courseUserMap = concurrentmap.NewConcurrentMap[string, *concurrentmap.ConcurrentMap[string, struct{}]]()
 	userCourseMap = concurrentmap.NewConcurrentMap[string, string]()
 	courseLogger = logger.GetLogger()
@@ -83,8 +83,8 @@ func TestLaunchCourse(t *testing.T) {
 		if err != nil {
 			t.Fatalf("发布课程失败: %v", err)
 		}
-		if _, ok := lanuchedMap.ReadPair(courseName); !ok {
-			t.Error("课程发布后，在 lanuchedMap 中找不到该课程")
+		if _, ok := launchedMap.ReadPair(courseName); !ok {
+			t.Error("课程发布后，在 launchedMap 中找不到该课程")
 		}
 		if _, ok := courseUserMap.ReadPair(courseName); !ok {
 			t.Error("课程发布后，在 courseUserMap 中找不到对应的学生名册")

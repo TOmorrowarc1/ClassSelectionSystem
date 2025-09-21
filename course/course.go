@@ -12,12 +12,12 @@ type CourseInfo struct {
 	Teacher     string
 	MaxStudents int
 	NowStudents int
-	Lanuched    bool
+	Launched    bool
 }
 
 var (
 	courseInfoMap *concurrentmap.ConcurrentMap[string, CourseInfo]
-	lanuchedMap   *concurrentmap.ConcurrentMap[string, struct{}]
+	launchedMap   *concurrentmap.ConcurrentMap[string, struct{}]
 	courseUserMap *concurrentmap.ConcurrentMap[string, *concurrentmap.ConcurrentMap[string, struct{}]]
 	userCourseMap *concurrentmap.ConcurrentMap[string, string]
 	courseLogger  *logger.Logger
@@ -27,28 +27,28 @@ var (
 
 func InitCourseSystem() {
 	courseInfoMap = concurrentmap.NewConcurrentMap[string, CourseInfo]()
-	lanuchedMap = concurrentmap.NewConcurrentMap[string, struct{}]()
+	launchedMap = concurrentmap.NewConcurrentMap[string, struct{}]()
 	courseUserMap = concurrentmap.NewConcurrentMap[string, *concurrentmap.ConcurrentMap[string, struct{}]]()
 	userCourseMap = concurrentmap.NewConcurrentMap[string, string]()
 	courseLogger = logger.GetLogger()
 	courseInfoMap.Load("data/course_Info.json")
-	lanuchedMap.Load("data/launched_courses.json")
+	launchedMap.Load("data/launched_courses.json")
 	courseUserMap.Load("data/course_user.json")
 	userCourseMap.Load("data/user_course.json")
 	// Check for consistency
 	// 1. All launched courses must exist in courseInfoMap
-	all_launched_course := lanuchedMap.ReadAll()
+	all_launched_course := launchedMap.ReadAll()
 	for courseName := range all_launched_course {
 		if _, ok := courseInfoMap.ReadPair(courseName); !ok {
 			courseLogger.Log(logger.Error, "Inconsistent state: Launched course %s does not exist in courseInfoMap, removing", courseName)
-			lanuchedMap.DeletePair(courseName)
+			launchedMap.DeletePair(courseName)
 		}
 	}
-	// 2. All courses in courseUserMap must exist in lanuchedMap.
+	// 2. All courses in courseUserMap must exist in launchedMap.
 	all_selected_course := courseUserMap.ReadAll()
 	for courseName := range all_selected_course {
-		if _, ok := lanuchedMap.ReadPair(courseName); !ok {
-			courseLogger.Log(logger.Error, "Inconsistent state: Course %s in courseUserMap does not exist in lanuchedMap, removing", courseName)
+		if _, ok := launchedMap.ReadPair(courseName); !ok {
+			courseLogger.Log(logger.Error, "Inconsistent state: Course %s in courseUserMap does not exist in launchedMap, removing", courseName)
 			courseUserMap.DeletePair(courseName)
 		}
 	}
@@ -69,7 +69,7 @@ func StoreCourseData() {
 	if err != nil {
 		courseLogger.Log(logger.Error, "Failed to store course Info: %v", err)
 	}
-	err = lanuchedMap.Store("data/launched_courses.json")
+	err = launchedMap.Store("data/launched_courses.json")
 	if err != nil {
 		courseLogger.Log(logger.Error, "Failed to store launched courses: %v", err)
 	}
@@ -94,14 +94,14 @@ func AddCourse(CourseName string, teacher string, MaxStudents int) error {
 		Teacher:     teacher,
 		MaxStudents: MaxStudents,
 		NowStudents: 0,
-		Lanuched:    false,
+		Launched:    false,
 	}
 	courseInfoMap.WritePair(CourseName, &new_course)
 	return nil
 }
 
 func ModifyCourse(courseName string, teacher string, MaxStudents int) error {
-	if _, exist := lanuchedMap.ReadPair(courseName); exist {
+	if _, exist := launchedMap.ReadPair(courseName); exist {
 		courseLogger.Log(logger.Warn, "Modification failed: Course %s is already launched", courseName)
 		return fmt.Errorf("course %s is already launched", courseName)
 	}
@@ -123,11 +123,11 @@ func LaunchCourse(courseName string) error {
 		courseLogger.Log(logger.Warn, "Launch failed: Course %s does not exist", courseName)
 		return fmt.Errorf("course %s does not exist", courseName)
 	}
-	if _, exist := lanuchedMap.ReadPair(courseName); exist {
+	if _, exist := launchedMap.ReadPair(courseName); exist {
 		courseLogger.Log(logger.Warn, "Launch failed: Course %s is already launched", courseName)
 		return fmt.Errorf("course %s is already launched", courseName)
 	}
-	lanuchedMap.WritePair(courseName, &struct{}{})
+	launchedMap.WritePair(courseName, &struct{}{})
 	temp_map := concurrentmap.NewConcurrentMap[string, struct{}]()
 	courseUserMap.WritePair(courseName, &temp_map)
 	courseLogger.Log(logger.Info, "Course %s launched successfully", courseName)
@@ -141,7 +141,7 @@ func SelectCourse(uid string, courseName string) error {
 		courseLogger.Log(logger.Warn, "Selection failed: User %s has already selected a course", uid)
 		return fmt.Errorf("user %s has already selected a course", uid)
 	}
-	if _, exist := lanuchedMap.ReadPair(courseName); !exist {
+	if _, exist := launchedMap.ReadPair(courseName); !exist {
 		courseLogger.Log(logger.Warn, "Selection failed: Course %s is not launched", courseName)
 		return fmt.Errorf("course %s is not launched", courseName)
 	}
