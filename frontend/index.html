@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 前端测试工具</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <main id="app-container">
+        <h1>Go-Powered Web App 前端</h1>
+        
+        <section class="token-section">
+            <label>当前认证Token:</label>
+            <div id="token-display">尚未登录</div>
+        </section>
+
+        <section class="controls-section">
+            <div class="form-group">
+                <label for="action-selector">1. 选择一个API操作 (Action):</label>
+                <select id="action-selector">
+                    <option value="Register">1. Register</option>
+                    <option value="Remove">2. Remove</option>
+                    <option value="LogIn">3. LogIn</option>
+                    <option value="LogOut">4. LogOut</option>
+                    <option value="ModifyPassword">5. ModifyPassword</option>
+                    <option value="GetUserInfo">6. GetUserInfo</option>
+                    <option value="GetAllUsersInfo">7. GetAllUsersInfo</option>
+                    <option value="GetPartUsersInfo">8. GetPartUsersInfo</option>
+                    <option value="AddCourse">9. AddCourse</option>
+                    <option value="ModifyCourse">10. ModifyCourse</option>
+                    <option value="LaunchCourse">11. LaunchCourse</option>
+                    <option value="GetAllCoursesInfo">12. GetAllCoursesInfo</option>
+                    <option value="SelectCourse">13. SelectCourse</option>
+                    <option value="DropCourse">14. DropCourse</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="params-input">2. 输入参数 (Parameters) - JSON格式:</label>
+                <textarea id="params-input" rows="12" placeholder="请在此处输入JSON格式的参数..."></textarea>
+            </div>
+
+            <button id="send-request-btn">3. 发送请求</button>
+        </section>
+
+        <section class="response-section">
+            <label>4. API 响应:</label>
+            <pre id="response-output">等待请求...</pre>
+        </section>
+    </main>
+
+    <!-- 引入JavaScript文件 -->
+    <script src="app.js"></script>
+</body>
+</html>
