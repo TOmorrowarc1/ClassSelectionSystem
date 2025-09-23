@@ -4,7 +4,7 @@
 
 // 您的后端API的统一入口URL。
 // 如果您的Go后端与前端部署在不同地址，请修改为完整URL，例如 'http://localhost:8080/api'
-const API_URL = '/api'; 
+const API_URL = 'http://localhost:8080/api'; 
 
 /**
  * 核心API调用函数
