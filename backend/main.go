@@ -19,6 +19,37 @@ var (
 	system_logger *logger.Logger
 )
 
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// 这是我们梦寐以求的日志！它会在任何路由逻辑之前执行。
+			system_logger.Log(logger.Debug, "Request Received: Method=%s, URL=%s, RemoteAddr=%s", r.Method, r.URL.Path, r.RemoteAddr)
+			
+			// 调用链中的下一个处理器 (可能是CORS中间件，也可能是mux)
+			next.ServeHTTP(w, r)
+	})
+}
+
+// --- 中间件 2: CORS 处理器 ---
+// 这个函数同样包装了一个 http.Handler，专门用于处理CORS。
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// 设置CORS头
+			w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5500")
+			w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+			// 如果是预检请求，直接响应并返回
+			if r.Method == "OPTIONS" {
+					system_logger.Log(logger.Debug, "Preflight OPTIONS request handled by CORS middleware")
+					w.WriteHeader(http.StatusOK)
+					return
+			}
+
+			// 如果不是预检请求，则调用下一个处理器
+			next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	system_logger = logger.GetLogger()
 	system_logger.SetLogFile("system.log")
@@ -32,9 +63,12 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api", RequestRoute)
+	var handler http.Handler = mux
+	handler = corsMiddleware(handler)
+	handler = loggingMiddleware(handler)
 	server := &http.Server{
 		Addr:    ":8080",
-		Handler: mux,
+		Handler: handler,
 	}
 
 	go func() {
