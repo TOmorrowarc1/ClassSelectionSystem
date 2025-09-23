@@ -1,91 +1,134 @@
 /* style.css */
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background-color: #f4f7f9;
-  color: #333;
-  margin: 0;
-  padding: 20px;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: 100vh;
+:root {
+  --primary-color: #007bff;
+  --secondary-color: #6c757d;
+  --success-color: #28a745;
+  --error-color: #dc3545;
+  --light-gray: #f8f9fa;
+  --border-color: #dee2e6;
+  --text-color: #212529;
 }
 
-#app-container {
-  width: 100%;
-  max-width: 800px;
-  background-color: #ffffff;
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--light-gray);
+  color: var(--text-color);
+  margin: 0;
+  padding: 20px;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  background: #fff;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  padding: 25px 35px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 30px;
+}
+
+header {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 20px;
+  margin-bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 h1 {
-  text-align: center;
-  color: #2c3e50;
-  margin-bottom: 30px;
-  border-bottom: 2px solid #e0e0e0;
-  padding-bottom: 15px;
+  color: var(--primary-color);
+  margin: 0;
 }
 
-section {
+.token-status span {
+  font-weight: bold;
+}
+
+.action-selector, .dynamic-form-container, #submit-button {
   margin-bottom: 25px;
-}
-
-.form-group {
-  margin-bottom: 20px;
 }
 
 label {
   display: block;
   font-weight: 600;
   margin-bottom: 8px;
-  color: #555;
 }
 
-select, textarea {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 16px;
-  box-sizing: border-box; /* 确保padding不会影响宽度 */
-}
-
-textarea {
-  font-family: "Courier New", Courier, monospace;
-  resize: vertical;
-}
-
-button {
+select, input[type="text"], input[type="password"], input[type="number"] {
   width: 100%;
   padding: 12px;
-  background-color: #3498db;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  font-size: 16px;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+select:focus, input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group-nested {
+  border: 1px solid #e9ecef;
+  padding: 20px;
+  border-radius: 5px;
+  margin-top: 10px;
+}
+
+.form-group-nested > label {
+  font-size: 1.1em;
+  color: var(--primary-color);
+}
+
+#submit-button {
+  width: 100%;
+  padding: 15px;
+  background-color: var(--primary-color);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 5px;
   font-size: 18px;
   font-weight: bold;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s;
 }
 
-button:hover {
-  background-color: #2980b9;
+#submit-button:hover {
+  background-color: #0056b3;
 }
 
-#token-display, #response-output {
-  background-color: #ecf0f1;
-  border: 1px solid #bdc3c7;
-  border-radius: 4px;
-  padding: 15px;
-  font-family: "Courier New", Courier, monospace;
-  white-space: pre-wrap; /* 自动换行 */
-  word-wrap: break-word; /* 单词过长时换行 */
-  min-height: 40px;
+.response-container h2 {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
 }
 
-#token-display {
-  color: #c0392b;
-  font-weight: bold;
+.response-container .content {
+  margin-top: 15px;
+  padding: 20px;
+  border-radius: 5px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+  line-height: 1.6;
+}
+
+.response-container .info {
+  background-color: #e9ecef;
+  border-left: 5px solid var(--secondary-color);
+}
+.response-container .success {
+  background-color: #d4edda;
+  border-left: 5px solid var(--success-color);
+  color: #155724;
+}
+.response-container .error {
+  background-color: #f8d7da;
+  border-left: 5px solid var(--error-color);
+  color: #721c24;
 }
