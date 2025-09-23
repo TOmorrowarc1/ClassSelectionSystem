@@ -25,16 +25,23 @@ var (
 	courseMutex sync.Mutex
 )
 
+const (
+	courseInfoPath  = "data/course_Info.json"
+	launchedMapPath = "data/launched_courses.json"
+	courseUserPath  = "data/course_user.json"
+	userCoursePath  = "data/user_course.json"
+)
+
 func InitCourseSystem() {
 	courseInfoMap = concurrentmap.NewConcurrentMap[string, CourseInfo]()
 	launchedMap = concurrentmap.NewConcurrentMap[string, struct{}]()
 	courseUserMap = concurrentmap.NewConcurrentMap[string, *concurrentmap.ConcurrentMap[string, struct{}]]()
 	userCourseMap = concurrentmap.NewConcurrentMap[string, string]()
 	courseLogger = logger.GetLogger()
-	courseInfoMap.Load("data/course_Info.json")
-	launchedMap.Load("data/launched_courses.json")
-	courseUserMap.Load("data/course_user.json")
-	userCourseMap.Load("data/user_course.json")
+	courseInfoMap.Load(courseInfoPath)
+	launchedMap.Load(launchedMapPath)
+	courseUserMap.Load(courseUserPath)
+	userCourseMap.Load(userCoursePath)
 	// Check for consistency
 	// 1. All launched courses must exist in courseInfoMap
 	all_launched_course := launchedMap.ReadAll()
@@ -65,19 +72,19 @@ func InitCourseSystem() {
 }
 
 func StoreCourseData() {
-	err := courseInfoMap.Store("data/course_Info.json")
+	err := courseInfoMap.Store(courseInfoPath)
 	if err != nil {
 		courseLogger.Log(logger.Error, "Failed to store course Info: %v", err)
 	}
-	err = launchedMap.Store("data/launched_courses.json")
+	err = launchedMap.Store(launchedMapPath)
 	if err != nil {
 		courseLogger.Log(logger.Error, "Failed to store launched courses: %v", err)
 	}
-	err = courseUserMap.Store("data/course_user.json")
+	err = courseUserMap.Store(courseUserPath)
 	if err != nil {
 		courseLogger.Log(logger.Error, "Failed to store course user map: %v", err)
 	}
-	err = userCourseMap.Store("data/user_course.json")
+	err = userCourseMap.Store(userCoursePath)
 	if err != nil {
 		courseLogger.Log(logger.Error, "Failed to store user course map: %v", err)
 	}
